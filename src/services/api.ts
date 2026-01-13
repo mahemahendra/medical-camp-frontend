@@ -2,6 +2,34 @@ import axios from 'axios';
 
 const API_URL = (import.meta as any).env.VITE_API_URL || '/api';
 
+// Get the backend base URL (without /api)
+export const getBackendBaseUrl = (): string => {
+  const apiUrl = API_URL;
+  // Remove /api suffix to get base URL
+  if (apiUrl.endsWith('/api')) {
+    return apiUrl.slice(0, -4);
+  }
+  return apiUrl;
+};
+
+// Fix attachment URLs that might have localhost:3000
+export const fixAttachmentUrl = (url: string): string => {
+  if (!url) return url;
+  
+  // If URL contains localhost, replace with actual backend URL
+  if (url.includes('localhost:3000') || url.includes('127.0.0.1:3000')) {
+    const backendBase = getBackendBaseUrl();
+    return url.replace(/https?:\/\/(localhost|127\.0\.0\.1):3000/, backendBase);
+  }
+  
+  // If URL is relative, make it absolute
+  if (url.startsWith('/uploads/')) {
+    return `${getBackendBaseUrl()}${url}`;
+  }
+  
+  return url;
+};
+
 export const apiClient = axios.create({
   baseURL: API_URL,
   headers: {

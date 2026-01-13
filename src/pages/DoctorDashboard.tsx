@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
-import api from '../services/api';
+import api, { fixAttachmentUrl } from '../services/api';
 import { Visit } from '../types';
 import { 
   Header, 
@@ -732,7 +732,7 @@ function ConsultationModal({ visit, onSave, onClose }: {
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button
-                          onClick={() => window.open(attachment.fileUrl, '_blank')}
+                          onClick={() => window.open(fixAttachmentUrl(attachment.fileUrl), '_blank')}
                           style={{
                             background: '#f3f4f6',
                             color: '#374151',

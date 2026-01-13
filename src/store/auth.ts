@@ -13,10 +13,35 @@ interface AuthState {
   initialize: () => void;
 }
 
+// Helper to safely access localStorage
+const safeGetItem = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const safeSetItem = (key: string, value: string): void => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Ignore localStorage errors
+  }
+};
+
+const safeRemoveItem = (key: string): void => {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Ignore localStorage errors
+  }
+};
+
 // Helper to safely parse JSON from localStorage
 const getStoredUser = (): User | null => {
   try {
-    const stored = localStorage.getItem('authUser');
+    const stored = safeGetItem('authUser');
     return stored ? JSON.parse(stored) : null;
   } catch {
     return null;
@@ -27,44 +52,48 @@ const getStoredUser = (): User | null => {
  * Global auth state management using Zustand
  */
 export const useAuthStore = create<AuthState>((set, get) => ({
-  user: getStoredUser(),
-  token: localStorage.getItem('authToken'),
-  campSlug: localStorage.getItem('campSlug'),
+  user: null,
+  token: null,
+  campSlug: null,
   isInitialized: false,
 
   initialize: () => {
-    const token = localStorage.getItem('authToken');
-    const user = getStoredUser();
-    const campSlug = localStorage.getItem('campSlug');
-    set({ user, token, campSlug, isInitialized: true });
+    try {
+      const token = safeGetItem('authToken');
+      const user = getStoredUser();
+      const campSlug = safeGetItem('campSlug');
+      set({ user, token, campSlug, isInitialized: true });
+    } catch {
+      set({ user: null, token: null, campSlug: null, isInitialized: true });
+    }
   },
 
   login: (user, token, campSlug) => {
-    localStorage.setItem('authToken', token);
-    localStorage.setItem('authUser', JSON.stringify(user));
+    safeSetItem('authToken', token);
+    safeSetItem('authUser', JSON.stringify(user));
     if (campSlug) {
-      localStorage.setItem('campSlug', campSlug);
+      safeSetItem('campSlug', campSlug);
     } else {
-      localStorage.removeItem('campSlug');
+      safeRemoveItem('campSlug');
     }
     set({ user, token, campSlug, isInitialized: true });
   },
 
   setAuth: (user, token, campSlug) => {
-    localStorage.setItem('authToken', token);
-    localStorage.setItem('authUser', JSON.stringify(user));
+    safeSetItem('authToken', token);
+    safeSetItem('authUser', JSON.stringify(user));
     if (campSlug) {
-      localStorage.setItem('campSlug', campSlug);
+      safeSetItem('campSlug', campSlug);
     } else {
-      localStorage.removeItem('campSlug');
+      safeRemoveItem('campSlug');
     }
     set({ user, token, campSlug, isInitialized: true });
   },
 
   logout: () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('authUser');
-    localStorage.removeItem('campSlug');
+    safeRemoveItem('authToken');
+    safeRemoveItem('authUser');
+    safeRemoveItem('campSlug');
     set({ user: null, token: null, campSlug: null });
   },
 

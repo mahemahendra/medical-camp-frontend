@@ -5,9 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#ffffff" />
     <title>Medical Camp Manager</title>
+    <style>
+      .app-loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-family: system-ui, sans-serif;
+        color: #666;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="app-loading">Loading Medical Camp Manager...</div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

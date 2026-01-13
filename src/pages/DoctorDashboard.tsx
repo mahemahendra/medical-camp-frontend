@@ -445,33 +445,34 @@ function ConsultationModal({ visit, onSave, onClose }: {
     });
   };
 
-  const handleMedicalRecordChange = (index: number, field: string, value: string) => {
-    const updated = [...formData.medicalRecords];
-    updated[index] = { ...updated[index], [field]: value };
-    setFormData({ ...formData, medicalRecords: updated });
-  };
+  // TODO: Re-enable medical records after backend fix
+  // const handleMedicalRecordChange = (index: number, field: string, value: string) => {
+  //   const updated = [...formData.medicalRecords];
+  //   updated[index] = { ...updated[index], [field]: value };
+  //   setFormData({ ...formData, medicalRecords: updated });
+  // };
 
-  const addMedicalRecord = () => {
-    setFormData({
-      ...formData,
-      medicalRecords: [...formData.medicalRecords, { 
-        category: '', 
-        title: '', 
-        value: '', 
-        unit: '', 
-        normalRange: '', 
-        notes: '',
-        recordDate: new Date().toISOString().split('T')[0]
-      }]
-    });
-  };
+  // const addMedicalRecord = () => {
+  //   setFormData({
+  //     ...formData,
+  //     medicalRecords: [...formData.medicalRecords, { 
+  //       category: '', 
+  //       title: '', 
+  //       value: '', 
+  //       unit: '', 
+  //       normalRange: '', 
+  //       notes: '',
+  //       recordDate: new Date().toISOString().split('T')[0]
+  //     }]
+  //   });
+  // };
 
-  const removeMedicalRecord = (index: number) => {
-    setFormData({
-      ...formData,
-      medicalRecords: formData.medicalRecords.filter((_, i) => i !== index)
-    });
-  };
+  // const removeMedicalRecord = (index: number) => {
+  //   setFormData({
+  //     ...formData,
+  //     medicalRecords: formData.medicalRecords.filter((_, i) => i !== index)
+  //   });
+  // };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);

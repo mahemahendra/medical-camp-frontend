@@ -179,6 +179,7 @@ interface TableCellProps {
   align?: 'left' | 'center' | 'right';
   width?: string | number;
   truncate?: boolean;
+  colSpan?: number;
 }
 
 export const TableCell: React.FC<TableCellProps> = ({ 
@@ -187,10 +188,12 @@ export const TableCell: React.FC<TableCellProps> = ({
   style,
   align = 'left',
   width,
-  truncate = false
+  truncate = false,
+  colSpan
 }) => (
   <td 
     className={className}
+    colSpan={colSpan}
     style={{
       ...cellStyle,
       textAlign: align,

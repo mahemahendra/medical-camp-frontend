@@ -13,6 +13,7 @@ interface ButtonProps {
   fullWidth?: boolean;
   icon?: string;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 const variantStyles: Record<ButtonVariant, React.CSSProperties> = {
@@ -75,7 +76,8 @@ export const Button: React.FC<ButtonProps> = ({
   disabled = false,
   fullWidth = false,
   icon,
-  className
+  className,
+  style: customStyle
 }) => {
   const styles: React.CSSProperties = {
     ...variantStyles[variant],
@@ -92,7 +94,8 @@ export const Button: React.FC<ButtonProps> = ({
     width: fullWidth ? '100%' : 'auto',
     boxShadow: variant === 'primary' || variant === 'success' || variant === 'danger'
       ? '0 2px 4px rgba(0,0,0,0.1)'
-      : 'none'
+      : 'none',
+    ...customStyle
   };
 
   return (

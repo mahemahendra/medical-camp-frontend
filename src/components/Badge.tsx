@@ -98,21 +98,36 @@ export const Badge: React.FC<BadgeProps> = ({
 // Status Badge for visit/user status
 interface StatusBadgeProps {
   status: string;
+  statusMap?: Record<string, { text: string; variant: string }>;  // Custom status mapping
   className?: string;
   style?: React.CSSProperties;
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({
   status,
+  statusMap,
   className,
   style
 }) => {
   const getStatusStyle = (status: string) => {
+    // Check custom statusMap first
+    if (statusMap && statusMap[status]) {
+      const { variant } = statusMap[status];
+      const variantMap: Record<string, { bg: string; color: string }> = {
+        success: { bg: '#dcfce7', color: '#166534' },
+        error: { bg: '#fee2e2', color: '#dc2626' },
+        warning: { bg: '#fef3c7', color: '#92400e' },
+        info: { bg: '#dbeafe', color: '#1e40af' },
+        primary: { bg: '#ede9fe', color: '#5b21b6' }
+      };
+      return variantMap[variant] || statusColors.REGISTERED;
+    }
     const upperStatus = status.toUpperCase();
     return statusColors[upperStatus as keyof typeof statusColors] || statusColors.REGISTERED;
   };
 
   const statusStyle = getStatusStyle(status);
+  const displayText = statusMap && statusMap[status] ? statusMap[status].text : status;
 
   return (
     <span
@@ -124,7 +139,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
         ...style
       }}
     >
-      {status}
+      {displayText}
     </span>
   );
 };
@@ -321,6 +336,7 @@ interface AvatarBadgeProps {
   size?: number;
   online?: boolean;
   src?: string;
+  variant?: string;  // For color variants
   className?: string;
   style?: React.CSSProperties;
 }

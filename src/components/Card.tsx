@@ -57,10 +57,11 @@ export const Card: React.FC<CardProps> = ({
 
 // Card Header
 interface CardHeaderProps {
-  title: string;
+  title?: string;
   subtitle?: string;
   icon?: string;
   actions?: ReactNode;
+  children?: ReactNode;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -70,6 +71,7 @@ export const CardHeader: React.FC<CardHeaderProps> = ({
   subtitle,
   icon,
   actions,
+  children,
   className,
   style
 }) => (
@@ -84,6 +86,9 @@ export const CardHeader: React.FC<CardHeaderProps> = ({
       ...style
     }}
   >
+    {children ? (
+      children
+    ) : (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
       {icon && <span style={{ fontSize: '1.5rem' }}>{icon}</span>}
       <div>
@@ -106,6 +111,7 @@ export const CardHeader: React.FC<CardHeaderProps> = ({
         )}
       </div>
     </div>
+    )}
     {actions && <div>{actions}</div>}
   </div>
 );
@@ -160,9 +166,11 @@ export const CardFooter: React.FC<CardFooterProps> = ({
 
 // Stat Card for displaying metrics
 interface StatCardProps {
-  title: string;
+  title?: string;
+  label?: string;  // alias for title
   value: number | string;
   color?: string;
+  variant?: string;  // alternative to color
   icon?: string;
   change?: {
     value: number | string;
@@ -172,15 +180,29 @@ interface StatCardProps {
   style?: React.CSSProperties;
 }
 
+const variantColors: Record<string, string> = {
+  primary: '#2563eb',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  info: '#06b6d4'
+};
+
 export const StatCard: React.FC<StatCardProps> = ({
   title,
+  label,
   value,
-  color = '#2563eb',
+  color,
+  variant,
   icon,
   change,
   className,
   style
-}) => (
+}) => {
+  const cardTitle = title || label || '';
+  const cardColor = color || (variant ? variantColors[variant] : '#2563eb');
+  
+  return (
   <Card
     className={className}
     style={{
@@ -194,7 +216,7 @@ export const StatCard: React.FC<StatCardProps> = ({
         width: '60px',
         height: '60px',
         borderRadius: '50%',
-        background: `${color}15`,
+        background: `${cardColor}15`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -215,7 +237,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       )}
     </div>
     
-    <div style={{ fontSize: '2rem', fontWeight: 'bold', color, marginBottom: '0.25rem' }}>
+    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: cardColor, marginBottom: '0.25rem' }}>
       {value}
     </div>
     
@@ -224,7 +246,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       color: 'var(--color-text-secondary)',
       fontWeight: '500'
     }}>
-      {title}
+      {cardTitle}
     </div>
     
     {change && (
@@ -240,35 +262,77 @@ export const StatCard: React.FC<StatCardProps> = ({
       </div>
     )}
   </Card>
-);
+  );
+};
 
-// Info Card for displaying key-value information
+// Info Card for displaying key-value information or as navigation card
 interface InfoCardProps {
   title: string;
-  data: Array<{
+  subtitle?: string;  // For simple navigation cards
+  data?: Array<{
     label: string;
     value: string | number | ReactNode;
     highlight?: boolean;
   }>;
   icon?: string;
   actions?: ReactNode;
+  onClick?: () => void;
+  variant?: string;
   className?: string;
   style?: React.CSSProperties;
 }
 
+const infoVariantColors: Record<string, string> = {
+  primary: '#2563eb',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  info: '#06b6d4'
+};
+
 export const InfoCard: React.FC<InfoCardProps> = ({
   title,
+  subtitle,
   data,
   icon,
   actions,
+  onClick,
+  variant = 'primary',
   className,
   style
-}) => (
+}) => {
+  const variantColor = infoVariantColors[variant] || infoVariantColors.primary;
+  
+  // Simple navigation card mode (when subtitle is provided)
+  if (subtitle !== undefined) {
+    return (
+      <Card 
+        className={className} 
+        style={{ 
+          cursor: onClick ? 'pointer' : 'default',
+          borderLeft: `4px solid ${variantColor}`,
+          ...style 
+        }}
+        onClick={onClick}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {icon && <span style={{ fontSize: '2rem' }}>{icon}</span>}
+          <div>
+            <div style={{ fontWeight: '600', fontSize: '1.125rem' }}>{title}</div>
+            <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>{subtitle}</div>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+  
+  // Data display mode
+  return (
   <Card className={className} style={style} padding={false}>
     <CardHeader title={title} icon={icon} actions={actions} />
     <CardContent>
       <div style={{ display: 'grid', gap: '0.75rem' }}>
-        {data.map((item, index) => (
+        {data && data.map((item, index) => (
           <div 
             key={index}
             style={{ 
@@ -296,7 +360,8 @@ export const InfoCard: React.FC<InfoCardProps> = ({
       </div>
     </CardContent>
   </Card>
-);
+  );
+};
 
 // Section Card with background for grouping content
 interface SectionCardProps {

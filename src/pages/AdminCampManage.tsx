@@ -464,8 +464,8 @@ export default function AdminCampManage() {
                     borderRadius: '4px',
                     display: 'inline-block'
                   }}>
-                    <a href={`/${camp.uniqueSlug}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
-                      /{camp.uniqueSlug} ↗
+                    <a href={`/#/${camp.uniqueSlug}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                      /#/{camp.uniqueSlug} ↗
                     </a>
                   </div>
                 </div>

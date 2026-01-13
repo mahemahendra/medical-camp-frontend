@@ -341,8 +341,8 @@ function CreateCampForm({ onSuccess }: { onSuccess: () => void }) {
         <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
           <p style={{ margin: '0.5rem 0' }}>
             <strong>Camp URL:</strong>{' '}
-            <a href={`/${result.camp.uniqueSlug}`} target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed' }}>
-              {window.location.origin}/{result.camp.uniqueSlug}
+            <a href={`/#/${result.camp.uniqueSlug}`} target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed' }}>
+              {window.location.origin}/#/{result.camp.uniqueSlug}
             </a>
           </p>
           <p style={{ margin: '0.5rem 0' }}>
@@ -1120,7 +1120,7 @@ function CampsDataGrid({ camps, navigate }: { camps: Camp[]; navigate: (path: st
                         ⚙️ Manage
                       </button>
                       <a
-                        href={`/${camp.uniqueSlug}`}
+                        href={`/#/${camp.uniqueSlug}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{

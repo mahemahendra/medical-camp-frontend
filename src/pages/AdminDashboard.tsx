@@ -756,7 +756,7 @@ function CreateCampForm({ onSuccess }: { onSuccess: () => void }) {
                         value={doctor.name}
                         onChange={(e) => updateDoctor(index, 'name', e.target.value)}
                         placeholder="Doctor name"
-                        style={{ ...inputStyle, padding: '0.5rem' }}
+                        style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
                       />
                     </td>
                     <td style={{ padding: '0.5rem' }}>
@@ -765,7 +765,7 @@ function CreateCampForm({ onSuccess }: { onSuccess: () => void }) {
                         value={doctor.email}
                         onChange={(e) => updateDoctor(index, 'email', e.target.value)}
                         placeholder="Email"
-                        style={{ ...inputStyle, padding: '0.5rem' }}
+                        style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
                       />
                     </td>
                     <td style={{ padding: '0.5rem' }}>
@@ -774,7 +774,7 @@ function CreateCampForm({ onSuccess }: { onSuccess: () => void }) {
                         value={doctor.specialty}
                         onChange={(e) => updateDoctor(index, 'specialty', e.target.value)}
                         placeholder="Specialty"
-                        style={{ ...inputStyle, padding: '0.5rem' }}
+                        style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
                       />
                     </td>
                     <td style={{ padding: '0.5rem' }}>
@@ -783,7 +783,7 @@ function CreateCampForm({ onSuccess }: { onSuccess: () => void }) {
                         value={doctor.phone || ''}
                         onChange={(e) => updateDoctor(index, 'phone', e.target.value)}
                         placeholder="Phone"
-                        style={{ ...inputStyle, padding: '0.5rem' }}
+                        style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
                       />
                     </td>
                     <td style={{ padding: '0.5rem' }}>

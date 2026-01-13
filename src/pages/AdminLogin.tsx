@@ -27,15 +27,18 @@ export default function AdminLogin() {
 
     try {
       const response = await login(email, password);
-      
+
       if (response.user.role !== 'ADMIN') {
         setError('Access denied. Admin credentials required.');
         setLoading(false);
         return;
       }
 
-      // Set auth state - the useEffect above will handle navigation
+      // Set auth state
       setAuth(response.user, response.token, null);
+      
+      // Explicitly navigate to dashboard
+      navigate('/admin/dashboard', { replace: true });
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
@@ -44,14 +47,14 @@ export default function AdminLogin() {
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
       justifyContent: 'center',
       padding: 'var(--spacing-md)'
     }}>
-      <Card style={{ 
+      <Card style={{
         width: '100%', 
         maxWidth: '400px'
       }}>

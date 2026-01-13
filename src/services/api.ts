@@ -30,8 +30,8 @@ api.interceptors.response.use(
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
       localStorage.removeItem('campSlug');
-      // Redirect to appropriate login page
-      window.location.href = campSlug ? `/${campSlug}/login` : '/admin/login';
+      // Redirect to appropriate login page (using hash for HashRouter)
+      window.location.href = campSlug ? `/#/${campSlug}/login` : '/#/admin/login';
     }
     return Promise.reject(error);
   }

@@ -3,17 +3,29 @@ import { useAuthStore } from './store/auth';
 import { ToastProvider } from './components';
 
 // Pages (lazy loaded for better performance)
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 
-const PublicRegistration = React.lazy(() => import('./pages/PublicRegistration'));
-const DoctorLogin = React.lazy(() => import('./pages/DoctorLogin'));
-const DoctorDashboard = React.lazy(() => import('./pages/DoctorDashboard'));
-const CampHeadDashboard = React.lazy(() => import('./pages/CampHeadDashboard'));
-const CampHeadDoctors = React.lazy(() => import('./pages/CampHeadDoctors'));
-const CampHeadVisitors = React.lazy(() => import('./pages/CampHeadVisitors'));
-const AdminLogin = React.lazy(() => import('./pages/AdminLogin'));
-const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
-const AdminCampManage = React.lazy(() => import('./pages/AdminCampManage'));
+// Wrapper for lazy imports with error handling
+const lazyWithRetry = (componentImport: () => Promise<any>) =>
+  React.lazy(async () => {
+    try {
+      return await componentImport();
+    } catch (error) {
+      console.error('Failed to load component:', error);
+      // Return a fallback component
+      return { default: () => <div className="loading">Failed to load. <button onClick={() => window.location.reload()}>Retry</button></div> };
+    }
+  });
+
+const PublicRegistration = lazyWithRetry(() => import('./pages/PublicRegistration'));
+const DoctorLogin = lazyWithRetry(() => import('./pages/DoctorLogin'));
+const DoctorDashboard = lazyWithRetry(() => import('./pages/DoctorDashboard'));
+const CampHeadDashboard = lazyWithRetry(() => import('./pages/CampHeadDashboard'));
+const CampHeadDoctors = lazyWithRetry(() => import('./pages/CampHeadDoctors'));
+const CampHeadVisitors = lazyWithRetry(() => import('./pages/CampHeadVisitors'));
+const AdminLogin = lazyWithRetry(() => import('./pages/AdminLogin'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/AdminDashboard'));
+const AdminCampManage = lazyWithRetry(() => import('./pages/AdminCampManage'));
 
 function App() {
   const { initialize, isInitialized, user, token } = useAuthStore();
@@ -100,7 +112,7 @@ function App() {
             <div className="container" style={{ textAlign: 'center', padding: 'var(--spacing-xl)' }}>
               <h1>404 - Page Not Found</h1>
               <p style={{ color: 'var(--color-text-secondary)', marginTop: 'var(--spacing-md)' }}>
-                Are you looking for the <a href="/admin/login" style={{ color: 'var(--color-primary)' }}>Admin Portal</a>?
+                Are you looking for the <a href="/#/admin/login" style={{ color: 'var(--color-primary)' }}>Admin Portal</a>?
               </p>
             </div>
           } />

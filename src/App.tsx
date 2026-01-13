@@ -71,6 +71,9 @@ function App() {
             path="/:campSlug/camp-head" 
             element={isLoggedIn ? <CampHeadDashboard /> : <Navigate to="/:campSlug/login" />} 
           />
+
+          {/* Fallback for unknown routes */}
+          <Route path="*" element={<Navigate to="/admin/login" replace />} />
           <Route 
             path="/:campSlug/camp-head/doctors" 
             element={isLoggedIn ? <CampHeadDoctors /> : <Navigate to="/:campSlug/login" />} 

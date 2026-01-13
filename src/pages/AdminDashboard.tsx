@@ -46,7 +46,6 @@ interface Doctor {
 }
 
 export default function AdminDashboard() {
-  console.log('AdminDashboard: Component rendering');
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [camps, setCamps] = useState<Camp[]>([]);

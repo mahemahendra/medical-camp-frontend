@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuthStore } from './store/auth';
 import { ToastProvider } from './components';
 
@@ -31,9 +31,6 @@ const AdminCampManage = lazyWithRetry(() => import('./pages/AdminCampManage'));
 function ProtectedRoute({ children, requireAdmin = false }: { children: React.ReactNode; requireAdmin?: boolean }) {
   const { user, token, isInitialized } = useAuthStore();
   const { campSlug } = useParams();
-  const location = useLocation();
-  
-  console.log('ProtectedRoute check:', { isInitialized, hasUser: !!user, hasToken: !!token, requireAdmin, campSlug, path: location.pathname });
   
   if (!isInitialized) {
     return <div className="loading">Loading...</div>;
@@ -61,18 +58,6 @@ function App() {
   useEffect(() => {
     initialize();
   }, [initialize]);
-
-  // Debug logging
-  useEffect(() => {
-    console.log('App Debug:', {
-      isInitialized,
-      hasToken: !!token,
-      hasUser: !!user,
-      userRole: user?.role,
-      currentPath: window.location.pathname,
-      currentHash: window.location.hash
-    });
-  }, [isInitialized, token, user]);
 
   // Don't render routes until auth is initialized
   if (!isInitialized) {

@@ -18,7 +18,12 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
+    // Return a no-op implementation instead of throwing
+    console.warn('useToast called outside ToastProvider, using no-op implementation');
+    return {
+      addToast: () => {},
+      removeToast: () => {}
+    };
   }
   return context;
 };

@@ -18,6 +18,7 @@ import {
  * Accessed via: domain.com/{campSlug}/camp-head
  */
 export default function CampHeadDashboard() {
+  console.log('CampHeadDashboard: Component rendering');
   const { campSlug } = useParams<{ campSlug: string }>();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();

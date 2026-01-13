@@ -35,6 +35,7 @@ import {
  * Accessed via: domain.com/{campSlug}/doctor
  */
 export default function DoctorDashboard() {
+  console.log('DoctorDashboard: Component rendering');
   const { campSlug } = useParams<{ campSlug: string }>();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
@@ -46,7 +47,10 @@ export default function DoctorDashboard() {
   const [showConsultation, setShowConsultation] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
+  console.log('DoctorDashboard: State initialized', { campSlug, user: user?.email });
+
   useEffect(() => {
+    console.log('DoctorDashboard: useEffect triggered');
     loadVisitors();
   }, []);
 

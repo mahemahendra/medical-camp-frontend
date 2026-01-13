@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/auth';
 import { Card, Input, Button, FormField, FormGroup } from '../components';
 
 export default function AdminLogin() {
+  console.log('AdminLogin: Component rendering');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -14,11 +15,12 @@ export default function AdminLogin() {
 
   // Redirect to dashboard if already logged in as admin
   useEffect(() => {
+    console.log('AdminLogin: useEffect check', { hasToken: !!token, hasUser: !!user, role: user?.role });
     if (token && user && user.role === 'ADMIN') {
-      // Use window.location for hard redirect to ensure fresh state
-      window.location.href = '/admin/dashboard';
+      console.log('AdminLogin: Redirecting to dashboard');
+      navigate('/admin/dashboard');
     }
-  }, [token, user]);
+  }, [token, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

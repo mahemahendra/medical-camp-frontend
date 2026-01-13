@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/auth';
 import { ToastProvider } from './components';
 
@@ -27,6 +27,33 @@ const AdminLogin = lazyWithRetry(() => import('./pages/AdminLogin'));
 const AdminDashboard = lazyWithRetry(() => import('./pages/AdminDashboard'));
 const AdminCampManage = lazyWithRetry(() => import('./pages/AdminCampManage'));
 
+// Protected Route wrapper that handles authentication
+function ProtectedRoute({ children, requireAdmin = false }: { children: React.ReactNode; requireAdmin?: boolean }) {
+  const { user, token, isInitialized } = useAuthStore();
+  const { campSlug } = useParams();
+  const location = useLocation();
+  
+  console.log('ProtectedRoute check:', { isInitialized, hasUser: !!user, hasToken: !!token, requireAdmin, campSlug, path: location.pathname });
+  
+  if (!isInitialized) {
+    return <div className="loading">Loading...</div>;
+  }
+  
+  const isLoggedIn = !!token && !!user;
+  const isAdmin = isLoggedIn && user?.role === 'ADMIN';
+  
+  if (requireAdmin && !isAdmin) {
+    return <Navigate to="/admin/login" replace />;
+  }
+  
+  if (!requireAdmin && !isLoggedIn) {
+    const loginPath = campSlug ? `/${campSlug}/login` : '/admin/login';
+    return <Navigate to={loginPath} replace />;
+  }
+  
+  return <>{children}</>;
+}
+
 function App() {
   const { initialize, isInitialized, user, token } = useAuthStore();
 
@@ -52,24 +79,20 @@ function App() {
     return <div className="loading">Initializing auth...</div>;
   }
 
-  // Use direct state values for auth checks (more reliable than function calls)
-  const isLoggedIn = !!token && !!user;
-  const isAdmin = isLoggedIn && user?.role === 'ADMIN';
-
   return (
     <ToastProvider>
       <div className="app">
-        <Suspense fallback={<div className="loading">Loading...</div>}>
+        <Suspense fallback={<div className="loading">Loading page...</div>}>
         <Routes>
           {/* Admin routes (no campSlug) */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route 
             path="/admin/dashboard" 
-            element={isAdmin ? <AdminDashboard /> : <Navigate to="/admin/login" />} 
+            element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} 
           />
           <Route 
             path="/admin/camps/:campId/manage" 
-            element={isAdmin ? <AdminCampManage /> : <Navigate to="/admin/login" />} 
+            element={<ProtectedRoute requireAdmin><AdminCampManage /></ProtectedRoute>} 
           />
           <Route 
             path="/admin" 
@@ -83,25 +106,25 @@ function App() {
           {/* Protected routes - Doctor */}
           <Route 
             path="/:campSlug/doctor" 
-            element={isLoggedIn ? <DoctorDashboard /> : <Navigate to="../login" />} 
+            element={<ProtectedRoute><DoctorDashboard /></ProtectedRoute>} 
           />
           <Route 
             path="/:campSlug/doctor/my-patients" 
-            element={isLoggedIn ? <CampHeadVisitors /> : <Navigate to="../login" />} 
+            element={<ProtectedRoute><CampHeadVisitors /></ProtectedRoute>} 
           />
           
           {/* Protected routes - Camp Head */}
           <Route 
             path="/:campSlug/camp-head" 
-            element={isLoggedIn ? <CampHeadDashboard /> : <Navigate to="../login" />} 
+            element={<ProtectedRoute><CampHeadDashboard /></ProtectedRoute>} 
           />
           <Route 
             path="/:campSlug/camp-head/doctors" 
-            element={isLoggedIn ? <CampHeadDoctors /> : <Navigate to="../login" />} 
+            element={<ProtectedRoute><CampHeadDoctors /></ProtectedRoute>} 
           />
           <Route 
             path="/:campSlug/camp-head/visitors" 
-            element={isLoggedIn ? <CampHeadVisitors /> : <Navigate to="../login" />} 
+            element={<ProtectedRoute><CampHeadVisitors /></ProtectedRoute>} 
           />
           
           {/* Root redirect */}

@@ -23,9 +23,21 @@ function App() {
     initialize();
   }, [initialize]);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('App Debug:', {
+      isInitialized,
+      hasToken: !!token,
+      hasUser: !!user,
+      userRole: user?.role,
+      currentPath: window.location.pathname,
+      currentHash: window.location.hash
+    });
+  }, [isInitialized, token, user]);
+
   // Don't render routes until auth is initialized
   if (!isInitialized) {
-    return <div className="loading">Loading...</div>;
+    return <div className="loading">Initializing auth...</div>;
   }
 
   // Use direct state values for auth checks (more reliable than function calls)
@@ -59,32 +71,31 @@ function App() {
           {/* Protected routes - Doctor */}
           <Route 
             path="/:campSlug/doctor" 
-            element={isLoggedIn ? <DoctorDashboard /> : <Navigate to="/:campSlug/login" />} 
+            element={isLoggedIn ? <DoctorDashboard /> : <Navigate to="../login" />} 
           />
           <Route 
             path="/:campSlug/doctor/my-patients" 
-            element={isLoggedIn ? <CampHeadVisitors /> : <Navigate to="/:campSlug/login" />} 
+            element={isLoggedIn ? <CampHeadVisitors /> : <Navigate to="../login" />} 
           />
           
           {/* Protected routes - Camp Head */}
           <Route 
             path="/:campSlug/camp-head" 
-            element={isLoggedIn ? <CampHeadDashboard /> : <Navigate to="/:campSlug/login" />} 
+            element={isLoggedIn ? <CampHeadDashboard /> : <Navigate to="../login" />} 
           />
-
-          {/* Fallback for unknown routes */}
-          <Route path="*" element={<Navigate to="/admin/login" replace />} />
           <Route 
             path="/:campSlug/camp-head/doctors" 
-            element={isLoggedIn ? <CampHeadDoctors /> : <Navigate to="/:campSlug/login" />} 
+            element={isLoggedIn ? <CampHeadDoctors /> : <Navigate to="../login" />} 
           />
           <Route 
             path="/:campSlug/camp-head/visitors" 
-            element={isLoggedIn ? <CampHeadVisitors /> : <Navigate to="/:campSlug/login" />} 
+            element={isLoggedIn ? <CampHeadVisitors /> : <Navigate to="../login" />} 
           />
           
-          {/* Fallback */}
+          {/* Root redirect */}
           <Route path="/" element={<Navigate to="/admin/login" />} />
+          
+          {/* Fallback for unknown routes */}
           <Route path="*" element={
             <div className="container" style={{ textAlign: 'center', padding: 'var(--spacing-xl)' }}>
               <h1>404 - Page Not Found</h1>

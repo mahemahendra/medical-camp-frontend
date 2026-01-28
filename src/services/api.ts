@@ -15,36 +15,40 @@ export const getBackendBaseUrl = (): string => {
 // Fix attachment URLs that might have localhost:3000
 export const fixAttachmentUrl = (url: string): string => {
   if (!url) return url;
-  
+
   // If URL contains localhost, replace with actual backend URL
   if (url.includes('localhost:3000') || url.includes('127.0.0.1:3000')) {
     const backendBase = getBackendBaseUrl();
     return url.replace(/https?:\/\/(localhost|127\.0\.0\.1):3000/, backendBase);
   }
-  
+
   // If URL is relative, make it absolute
   if (url.startsWith('/uploads/')) {
     return `${getBackendBaseUrl()}${url}`;
   }
-  
+
   return url;
 };
 
 export const apiClient = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  baseURL: API_URL
 });
 
 const api = apiClient;
 
-// Add auth token to requests
+// Add auth token to requests and handle Content-Type
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('authToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Only set Content-Type to JSON if NOT sending FormData
+  // When sending FormData, let the browser set multipart/form-data with boundary
+  if (!(config.data instanceof FormData)) {
+    config.headers['Content-Type'] = 'application/json';
+  }
+
   return config;
 });
 

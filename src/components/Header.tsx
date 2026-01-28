@@ -59,15 +59,22 @@ export const Header: React.FC<HeaderProps> = ({
             </HeaderButton>
           )}
           <div style={{
-            width: '44px',
-            height: '44px',
-            background: 'rgba(255,255,255,0.2)',
-            borderRadius: '10px',
+            height: '80px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '1.5rem'
-          }}>{icon}</div>
+          }}>{
+              (icon?.startsWith('http') || icon?.startsWith('/') || icon?.startsWith('data:')) ? (
+                <img
+                  src={icon}
+                  alt="Logo"
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              ) : (
+                icon
+              )
+            }</div>
           <div>
             <h1 style={{ fontSize: '1.25rem', margin: 0, color: 'white', fontWeight: '600' }}>{title}</h1>
             {subtitle && (
@@ -106,7 +113,7 @@ export const HeaderButton: React.FC<HeaderButtonProps> = ({
   disabled = false
 }) => {
   const colors = themeColors[theme];
-  
+
   const getStyles = (): React.CSSProperties => {
     const base: React.CSSProperties = {
       borderRadius: '8px',
@@ -253,9 +260,9 @@ interface ContentContainerProps {
   padding?: string;
 }
 
-export const ContentContainer: React.FC<ContentContainerProps> = ({ 
-  children, 
-  padding = '1.5rem' 
+export const ContentContainer: React.FC<ContentContainerProps> = ({
+  children,
+  padding = '1.5rem'
 }) => (
   <div style={{ maxWidth: '1400px', margin: '0 auto', padding }}>
     {children}

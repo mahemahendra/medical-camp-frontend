@@ -5,15 +5,20 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build", 
+    "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.7",
+    "@mui/material": "^7.3.7",
+    "@mui/x-data-grid": "^8.26.0",
+    "axios": "^1.6.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.21.1",
-    "axios": "^1.6.5",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
@@ -28,8 +33,15 @@
     "typescript": "^5.3.3",
     "vite": "^5.0.11"
   },
-  "keywords": ["medical", "camp", "frontend", "react", "multi-tenant", "typescript"],
-  "author": "Medical Camp Manager", 
+  "keywords": [
+    "medical",
+    "camp",
+    "frontend",
+    "react",
+    "multi-tenant",
+    "typescript"
+  ],
+  "author": "Medical Camp Manager",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"

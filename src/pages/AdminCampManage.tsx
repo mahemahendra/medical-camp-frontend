@@ -15,6 +15,8 @@ interface CampDetails {
   hospitalAddress?: string;
   hospitalPhone?: string;
   hospitalEmail?: string;
+  logoUrl?: string;
+  backgroundImageUrl?: string;
 }
 
 interface Doctor {
@@ -256,7 +258,7 @@ export default function AdminCampManage() {
   const [loading, setLoading] = useState(true);
   const [credentialLoading, setCredentialLoading] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
-  
+
   // Password Reset Modal State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<{ id: string; name: string } | null>(null);
@@ -279,7 +281,7 @@ export default function AdminCampManage() {
         apiClient.get(`/admin/camps/${campId}`),
         apiClient.get(`/admin/camps/${campId}/doctors`)
       ]);
-      
+
       setCamp(campResponse.data.camp);
       setDoctors(doctorsResponse.data.doctors || []);
     } catch (error) {
@@ -311,18 +313,18 @@ export default function AdminCampManage() {
 
     setCredentialLoading(selectedDoctor.id);
     setShowPasswordModal(false);
-    
+
     try {
       const payload: any = {
         passwordMode: passwordSettings.mode
       };
-      
+
       if (passwordSettings.mode === 'manual') {
         payload.manualPassword = passwordSettings.manualPassword;
       }
 
       const response = await apiClient.post(`/admin/doctors/${selectedDoctor.id}/reset-password`, payload);
-      
+
       const modeText = passwordSettings.mode === 'manual' ? 'set manually' : 'auto-generated';
       setSuccessMessage(`Password ${modeText} for Dr. ${selectedDoctor.name}. New password: ${response.data.tempPassword}`);
       setTimeout(() => setSuccessMessage(''), 10000);
@@ -342,7 +344,7 @@ export default function AdminCampManage() {
     const now = new Date();
     const startTime = new Date(camp.startTime);
     const endTime = new Date(camp.endTime);
-    
+
     if (now > endTime) {
       return { text: 'Completed', color: '#64748b', bg: '#f1f5f9' };
     } else if (now >= startTime && now <= endTime) {
@@ -389,6 +391,9 @@ export default function AdminCampManage() {
         theme="admin"
         actions={
           <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <HeaderButton variant="ghost" theme="admin" onClick={() => navigate(`/admin/camps/${campId}/edit`)}>
+              ✏️ Edit Camp
+            </HeaderButton>
             <HeaderButton variant="ghost" theme="admin" onClick={() => navigate('/admin/dashboard')}>
               ← Back to Dashboard
             </HeaderButton>
@@ -401,11 +406,11 @@ export default function AdminCampManage() {
 
       <ContentContainer>
         {successMessage && (
-          <div style={{ 
-            background: '#d1fae5', 
-            color: '#065f46', 
-            padding: '1rem 1.5rem', 
-            borderRadius: '12px', 
+          <div style={{
+            background: '#d1fae5',
+            color: '#065f46',
+            padding: '1rem 1.5rem',
+            borderRadius: '12px',
             marginBottom: '2rem',
             border: '1px solid #6ee7b7'
           }}>
@@ -440,6 +445,37 @@ export default function AdminCampManage() {
             </span>
           </div>
 
+          {/* Camp Branding */}
+          {(camp.logoUrl || camp.backgroundImageUrl) && (
+            <div style={{ marginBottom: '2rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.1rem', margin: '0 0 1rem 0', color: '#334155' }}>
+                🎨 Camp Branding
+              </h3>
+              <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+                {camp.logoUrl && (
+                  <div>
+                    <span style={{ display: 'block', color: '#64748b', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Logo:</span>
+                    <img
+                      src={camp.logoUrl}
+                      alt="Camp Logo"
+                      style={{ height: '80px', objectFit: 'contain', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.25rem' }}
+                    />
+                  </div>
+                )}
+                {camp.backgroundImageUrl && (
+                  <div>
+                    <span style={{ display: 'block', color: '#64748b', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Background:</span>
+                    <img
+                      src={camp.backgroundImageUrl}
+                      alt="Camp Background"
+                      style={{ height: '80px', objectFit: 'cover', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
             <div>
               <h3 style={{ fontSize: '1.1rem', margin: '0 0 1rem 0', color: '#334155', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem' }}>
@@ -456,7 +492,7 @@ export default function AdminCampManage() {
                 </div>
                 <div>
                   <span style={{ color: '#64748b', fontSize: '0.9rem' }}>URL:</span>
-                  <div style={{ 
+                  <div style={{
                     color: '#7c3aed',
                     fontFamily: 'monospace',
                     background: '#f3f4f6',
@@ -514,14 +550,14 @@ export default function AdminCampManage() {
         </div>
 
         {/* Doctors Management */}
-        <DoctorsDataGrid 
-          doctors={doctors} 
+        <DoctorsDataGrid
+          doctors={doctors}
           onResetPassword={handleResetPassword}
           credentialLoading={credentialLoading}
         />
       </ContentContainer>
-      
-      <PasswordResetModal 
+
+      <PasswordResetModal
         show={showPasswordModal}
         selectedDoctor={selectedDoctor}
         passwordSettings={passwordSettings}
@@ -530,18 +566,18 @@ export default function AdminCampManage() {
         onSubmit={handlePasswordModalSubmit}
         onPasswordSettingsChange={setPasswordSettings}
       />
-      
+
       {AlertComponent}
     </PageContainer>
   );
 }
 
-function DoctorsDataGrid({ 
-  doctors, 
-  onResetPassword, 
-  credentialLoading 
-}: { 
-  doctors: Doctor[]; 
+function DoctorsDataGrid({
+  doctors,
+  onResetPassword,
+  credentialLoading
+}: {
+  doctors: Doctor[];
   onResetPassword: (doctorId: string, doctorName: string) => void;
   credentialLoading: string | null;
 }) {
@@ -559,7 +595,7 @@ function DoctorsDataGrid({
   };
 
   const filteredAndSortedDoctors = doctors
-    .filter(doctor => 
+    .filter(doctor =>
       doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doctor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (doctor.specialty && doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -567,12 +603,12 @@ function DoctorsDataGrid({
     .sort((a, b) => {
       let aValue = a[sortField] || '';
       let bValue = b[sortField] || '';
-      
+
       if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = (bValue as string).toLowerCase();
       }
-      
+
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
@@ -590,14 +626,14 @@ function DoctorsDataGrid({
       overflow: 'hidden',
       boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
     }}>
-      <div style={{ 
+      <div style={{
         padding: '1.5rem 1.5rem 0 1.5rem',
         borderBottom: '1px solid #f1f5f9'
       }}>
         <h2 style={{ fontSize: '1.5rem', margin: '0 0 1rem 0', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           👨‍⚕️ Doctors Management ({doctors.length})
         </h2>
-        
+
         <div style={{ position: 'relative', marginBottom: '1rem' }}>
           <input
             type="text"
@@ -626,10 +662,10 @@ function DoctorsDataGrid({
             🔍
           </span>
         </div>
-        
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
           paddingBottom: '1rem'
         }}>
@@ -796,7 +832,7 @@ function DoctorsDataGrid({
       )}
 
       {filteredAndSortedDoctors.length === 0 && searchTerm && (
-        <div style={{ 
+        <div style={{
           padding: '2rem',
           textAlign: 'center',
           color: '#64748b'

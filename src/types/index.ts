@@ -25,6 +25,7 @@ export interface Camp {
   name: string;
   description?: string;
   logoUrl?: string;
+  backgroundImageUrl?: string;
   venue: string;
   startTime: Date;
   endTime: Date;
@@ -84,6 +85,7 @@ export interface Consultation {
   prescriptions?: Prescription[];
   medicalRecords?: MedicalRecord[];
   followUpAdvice?: string;
+  isInsured?: boolean;
   createdAt: Date;
 }
 

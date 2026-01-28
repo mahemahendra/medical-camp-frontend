@@ -2,28 +2,19 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../services/api';
 import { Camp } from '../types';
-import { 
-  PageContainer, 
-  Button, 
-  useToast,
-  Card,
-  CardHeader,
-  CardContent,
-  FormField,
-  FormGroup,
-  Input,
-  Select,
-  TextArea
-} from '../components';
+import { useToast } from '../components';
 
 /**
- * Public registration page for visitors
- * Accessed via: domain.com/{campSlug}
+ * Extended Camp interface to include doctors for the public view
  */
+interface PublicCamp extends Camp {
+  doctors?: Array<{ name: string; specialty?: string }>;
+}
+
 export default function PublicRegistration() {
   const { campSlug } = useParams<{ campSlug: string }>();
   const { addToast } = useToast();
-  const [camp, setCamp] = useState<Camp | null>(null);
+  const [camp, setCamp] = useState<PublicCamp | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -34,12 +25,7 @@ export default function PublicRegistration() {
     phone: '',
     age: '',
     gender: 'Male',
-    address: '',
-    city: '',
-    district: '',
-    symptoms: '',
-    existingConditions: '',
-    allergies: ''
+    symptoms: ''
   });
 
   useEffect(() => {
@@ -64,7 +50,13 @@ export default function PublicRegistration() {
     try {
       const response = await api.post(`/public/${campSlug}/register`, {
         ...formData,
-        age: parseInt(formData.age)
+        age: parseInt(formData.age),
+        // Send other required fields with defaults if not in UI
+        address: '',
+        city: '',
+        district: '',
+        existingConditions: '',
+        allergies: ''
       });
 
       setRegisteredVisitor(response.data.visitor);
@@ -80,293 +72,393 @@ export default function PublicRegistration() {
     }
   };
 
+  // --- Styles ---
+  const styles = {
+    page: {
+      minHeight: '100vh',
+      background: '#e5e7eb', // Light gray background behind everything
+      fontFamily: "'Inter', sans-serif",
+      paddingBottom: '2rem',
+    },
+    // The top banner image (blurred background effect)
+    bannerBackground: {
+      height: '350px',
+      width: '100%',
+      position: 'absolute' as 'absolute',
+      top: 0,
+      left: 0,
+      zIndex: 0,
+      backgroundImage: camp?.backgroundImageUrl
+        ? `url(${camp.backgroundImageUrl})`
+        : 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+    },
+    bannerOverlay: {
+      position: 'absolute' as 'absolute',
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.3)', // Darken slightly
+    },
+    // The Main Floating Card
+    mainCard: {
+      position: 'relative' as 'relative',
+      zIndex: 10,
+      maxWidth: '600px',
+      margin: '0 auto',
+      marginTop: '60px', // Push down from top
+      background: 'white',
+      borderRadius: '24px',
+      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+      overflow: 'hidden',
+    },
+    headerSection: {
+      padding: '2rem 2rem 1rem',
+      borderBottom: '1px solid #f3f4f6',
+    },
+    hospitalBrand: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.75rem',
+      marginBottom: '1.5rem',
+      fontWeight: '600',
+      color: '#374151',
+      fontSize: '1.1rem',
+    },
+    logo: {
+      height: '32px',
+      width: 'auto',
+    },
+    campTitle: {
+      fontSize: '1.75rem',
+      fontWeight: '700',
+      color: '#111827',
+      marginBottom: '0.5rem',
+      lineHeight: 1.2,
+    },
+    campConductedBy: {
+      color: '#6b7280',
+      fontSize: '0.95rem',
+      marginBottom: '1rem',
+    },
+    locationPill: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      background: '#f3f4f6',
+      padding: '0.25rem 0.75rem',
+      borderRadius: '9999px',
+      fontSize: '0.85rem',
+      color: '#4b5563',
+      gap: '0.5rem',
+      float: 'right' as 'float', // Simple right align like screenshot
+      marginTop: '-3rem', // Negative margin to align with title area roughly
+    },
+    doctorList: {
+      marginTop: '1rem',
+      color: '#374151',
+      fontSize: '0.9rem',
+      lineHeight: '1.5',
+    },
+    doctorItem: {
+      fontWeight: '500',
+    },
+    confidentialityBanner: {
+      background: '#ecfdf5', // Light green
+      padding: '0.75rem 1.5rem',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.75rem',
+      color: '#065f46',
+      fontSize: '0.85rem',
+      fontWeight: '500',
+      marginTop: '1.5rem',
+      borderRadius: '8px',
+      margin: '1.5rem 2rem 1rem', // Match padding of sections
+    },
+    // Form Sections
+    formSection: {
+      margin: '1.5rem 2rem',
+      background: 'white',
+      border: '1px solid #e5e7eb',
+      borderRadius: '12px',
+      padding: '1.5rem',
+      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+    },
+    sectionHeader: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.75rem',
+      fontSize: '1.1rem',
+      fontWeight: '600',
+      color: '#374151',
+      marginBottom: '1.5rem',
+      borderBottom: '1px solid #f3f4f6',
+      paddingBottom: '0.75rem',
+    },
+    iconCircle: {
+      width: '32px',
+      height: '32px',
+      borderRadius: '50%',
+      // Greenish teal icon background (approximate from screenshot)
+      border: '1px solid #2F855A',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: '#2F855A',
+    },
+    // Inputs
+    label: {
+      display: 'block',
+      fontSize: '0.875rem',
+      fontWeight: '600',
+      color: '#4b5563',
+      marginBottom: '0.4rem',
+    },
+    input: {
+      width: '100%',
+      padding: '0.75rem',
+      borderRadius: '8px',
+      border: '1px solid #d1d5db',
+      fontSize: '0.95rem',
+      outline: 'none',
+      transition: 'border-color 0.15s',
+      color: '#1f2937',
+    },
+    row: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: '1rem',
+      marginBottom: '1rem',
+    },
+    // Footer
+    footer: {
+      padding: '0 2rem 2rem',
+      textAlign: 'center' as 'center',
+    },
+    submitBtn: {
+      width: '100%',
+      background: '#2F855A', // The specific green from screenshot
+      color: 'white',
+      padding: '1rem',
+      borderRadius: '8px',
+      fontSize: '1.1rem',
+      fontWeight: '600',
+      border: 'none',
+      cursor: submitting ? 'not-allowed' : 'pointer',
+      boxShadow: '0 4px 6px -1px rgba(47, 133, 90, 0.4)',
+      marginBottom: '0.75rem',
+      opacity: submitting ? 0.8 : 1,
+    },
+    subtext: {
+      fontSize: '0.85rem',
+      color: '#6b7280',
+    }
+  };
+
   if (loading) {
     return (
-      <PageContainer>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🏥</div>
-            <p style={{ color: '#64748b' }}>Loading camp information...</p>
-          </div>
-        </div>
-      </PageContainer>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="animate-spin" style={{ width: '40px', height: '40px', border: '3px solid #f3f3f3', borderTop: '3px solid #2F855A', borderRadius: '50%' }}></div>
+      </div>
     );
   }
 
-  if (!camp) {
-    return (
-      <PageContainer>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-          <div style={{ 
-            textAlign: 'center', 
-            background: 'white', 
-            padding: '3rem', 
-            borderRadius: '16px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
-          }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>😕</div>
-            <h2 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>Camp Not Found</h2>
-            <p style={{ color: '#64748b', margin: 0 }}>The medical camp you're looking for doesn't exist.</p>
-          </div>
-        </div>
-      </PageContainer>
-    );
-  }
+  if (!camp) return <div style={{ padding: '2rem', textAlign: 'center' }}>Camp not found</div>;
 
   if (success && registeredVisitor) {
     return (
-      <PageContainer>
-        <div style={{ 
-          minHeight: '100vh', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          padding: '1.5rem'
-        }}>
-          <div style={{ 
-            background: 'white', 
-            borderRadius: '20px', 
-            padding: '2.5rem',
-            maxWidth: '450px',
-            width: '100%',
-            textAlign: 'center',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.1)'
-          }}>
-            <div style={{
-              width: '80px',
-              height: '80px',
-              background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1.5rem',
-              fontSize: '2.5rem'
-            }}>✓</div>
-            
-            <h1 style={{ fontSize: '1.75rem', margin: '0 0 0.5rem 0', color: '#1e293b' }}>
-              Registration Successful!
-            </h1>
-            <p style={{ fontSize: '1.125rem', margin: '0 0 2rem 0', color: '#64748b' }}>
-              Thank you, {registeredVisitor.name}!
-            </p>
-            
-            <div style={{ 
-              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', 
-              padding: '1.5rem', 
-              borderRadius: '12px', 
-              marginBottom: '1.5rem',
-              border: '1px solid #bfdbfe'
-            }}>
-              <p style={{ margin: '0 0 0.5rem 0', color: '#64748b', fontSize: '0.875rem', fontWeight: '500' }}>
-                YOUR PATIENT ID
-              </p>
-              <p style={{ 
-                fontSize: '1.75rem', 
-                fontWeight: 'bold', 
-                color: '#1e40af',
-                margin: 0,
-                letterSpacing: '0.05em'
-              }}>
-                {registeredVisitor.patientId}
-              </p>
-            </div>
-            
-            {registeredVisitor.qrCode && (
-              <div style={{ 
-                background: 'white', 
-                padding: '1rem', 
-                borderRadius: '12px',
-                border: '1px solid #e2e8f0',
-                marginBottom: '1.5rem'
-              }}>
-                <img 
-                  src={registeredVisitor.qrCode} 
-                  alt="QR Code" 
-                  style={{ maxWidth: '180px', width: '100%' }} 
-                />
-              </div>
-            )}
-            
-            <p style={{ 
-              color: '#64748b', 
-              fontSize: '0.875rem',
-              margin: 0,
-              lineHeight: '1.6'
-            }}>
-              📱 Your details have been sent to your phone via WhatsApp.<br/>
-              Please save your Patient ID and QR code.
-            </p>
-          </div>
+      <div style={styles.page}>
+        <div style={styles.bannerBackground}>
+          <div style={styles.bannerOverlay}></div>
         </div>
-      </PageContainer>
-    );
+
+        <div style={{ ...styles.mainCard, marginTop: '100px', textAlign: 'center', padding: '3rem' }}>
+          <div style={{
+            width: '80px', height: '80px', borderRadius: '50%',
+            background: '#ecfdf5', color: '#059669', fontSize: '2.5rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem'
+          }}>✓</div>
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#064e3b', marginBottom: '0.5rem' }}>Registration Successful</h2>
+          <p style={{ color: '#4b5563', marginBottom: '2rem' }}>You have booked your free consultation.</p>
+
+          <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '2rem' }}>
+            <p style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '600' }}>Patient ID</p>
+            <p style={{ fontSize: '2.5rem', fontWeight: '800', color: '#2F855A', fontFamily: 'monospace' }}>{registeredVisitor.patientId}</p>
+          </div>
+
+          {registeredVisitor.qrCode && (
+            <img src={registeredVisitor.qrCode} alt="QR" style={{ width: '150px', margin: '0 auto' }} />
+          )}
+        </div>
+      </div>
+    )
   }
 
+  // Helper for input focus
+  const handleFocus = (e: any) => e.target.style.borderColor = '#2F855A';
+  const handleBlur = (e: any) => e.target.style.borderColor = '#d1d5db';
+
   return (
-    <PageContainer>
-      {/* Header Banner */}
-      <div style={{
-        background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
-        padding: '2rem 1.5rem',
-        textAlign: 'center',
-        color: 'white'
-      }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-          {camp.logoUrl && (
-            <img 
-              src={camp.logoUrl} 
-              alt={camp.name} 
-              style={{ 
-                maxHeight: '60px', 
-                marginBottom: '1rem',
-                background: 'white',
-                padding: '0.5rem',
-                borderRadius: '8px'
-              }} 
-            />
-          )}
-          <div style={{
-            width: '56px',
-            height: '56px',
-            background: 'rgba(255,255,255,0.2)',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 1rem',
-            fontSize: '1.75rem'
-          }}>🏥</div>
-          <h1 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', fontWeight: '600' }}>{camp.name}</h1>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            gap: '1.5rem', 
-            flexWrap: 'wrap',
-            fontSize: '0.9rem',
-            opacity: 0.9
-          }}>
-            <span>📍 {camp.venue}</span>
-            <span>📅 {new Date(camp.startTime).toLocaleDateString()}</span>
+    <div style={styles.page}>
+      {/* Background Banner */}
+      <div style={styles.bannerBackground}>
+        <div style={styles.bannerOverlay}></div>
+      </div>
+
+      {/* Main Card */}
+      <div style={styles.mainCard}>
+
+        {/* Header Section */}
+        <div style={styles.headerSection}>
+          <div style={styles.hospitalBrand}>
+            {/* If logo exists use it, else generic hospital icon */}
+            {camp.logoUrl ? (
+              <img src={camp.logoUrl} alt="Logo" style={styles.logo} />
+            ) : (
+              <span style={{ color: '#2F855A', fontSize: '1.5rem' }}>🏥</span>
+            )}
+            <span>{camp.hospitalName || 'Medical Camp'}</span>
           </div>
-          {camp.description && (
-            <p style={{ marginTop: '1rem', opacity: 0.85, fontSize: '0.9rem' }}>{camp.description}</p>
-          )}
-        </div>
-      </div>
 
-      {/* Registration Form */}
-      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1.5rem' }}>
-        <Card style={{ marginTop: '-2rem', position: 'relative' }}>
-          <CardHeader>
-            <h2 style={{ 
-              margin: '0', 
-              fontSize: '1.25rem', 
-              color: '#1e293b',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <span style={{ fontSize: '1.5rem' }}>📋</span>
-              Patient Registration
-            </h2>
-          </CardHeader>
-          <CardContent>
-          
-          <form onSubmit={handleSubmit}>
-            <FormGroup>
-              {/* Full Name */}
-              <FormField label="Full Name" required>
-                <Input
-                  type="text"
-                  required
-                  placeholder="Enter your full name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              </FormField>
+          <div style={{ position: 'relative' }}>
+            <h1 style={styles.campTitle}>{camp.name}</h1>
 
-              {/* Phone */}
-              <FormField label="Phone Number" required>
-                <Input
-                  type="tel"
-                  required
-                  placeholder="Enter your phone number"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
-              </FormField>
-
-              {/* Age & Gender Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <FormField label="Age" required>
-                  <Input
-                    type="number"
-                    required
-                    min="0"
-                    max="150"
-                    placeholder="Age"
-                    value={formData.age}
-                    onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                  />
-                </FormField>
-                
-                <FormField label="Gender" required>
-                  <Select 
-                    value={formData.gender} 
-                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                  >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </Select>
-                </FormField>
-              </div>
-
-              {/* City */}
-              <FormField label="City / Village">
-                <Input
-                  type="text"
-                  placeholder="Enter your city or village"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                />
-              </FormField>
-
-              {/* Symptoms */}
-              <FormField label="Symptoms / Reason for Visit">
-                <TextArea
-                  rows={3}
-                  placeholder="Describe your symptoms or reason for visiting"
-                  value={formData.symptoms}
-                  onChange={(e) => setFormData({ ...formData, symptoms: e.target.value })}
-                />
-              </FormField>
-            </FormGroup>
-
-            <Button 
-              type="submit" 
-              variant="primary" 
-              size="lg" 
-              fullWidth 
-              disabled={submitting}
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(camp.venue)}`}
+              target="_blank"
+              rel="noopener"
+              style={{ ...styles.locationPill, textDecoration: 'none', position: 'absolute', top: 0, right: 0 }}
             >
-              {submitting ? '⏳ Registering...' : '✓ Complete Registration'}
-            </Button>
-          </form>
-          </CardContent>
-        </Card>
-        
-        {/* Footer note */}
-        <p style={{ 
-          textAlign: 'center', 
-          color: '#64748b', 
-          fontSize: '0.8rem',
-          marginTop: '1.5rem'
-        }}>
-          By registering, you agree to share your information with the medical camp organizers.
-        </p>
+              <span style={{ color: '#dc2626' }}>📍</span>
+              {camp.venue}
+              <span style={{ color: '#d1d5db', margin: '0 0.25rem' }}>|</span>
+              {new Date(camp.startTime).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+            </a>
+          </div>
+
+          <p style={styles.campConductedBy}>
+            Conducted by <span style={{ fontWeight: '600', color: '#4b5563' }}>{camp.hospitalName}, {camp.hospitalAddress?.split(',')[0]}</span>
+          </p>
+
+          <div style={styles.doctorList}>
+            {camp.doctors && camp.doctors.length > 0 ? (
+              camp.doctors.map((doc, i) => (
+                <div key={i} style={styles.doctorItem}>
+                  DR. {doc.name.toUpperCase()} {doc.specialty ? `(${doc.specialty})` : ''}
+                </div>
+              ))
+            ) : (
+              <div>Doctors will be assigned soon.</div>
+            )}
+          </div>
+        </div>
+
+        {/* Confidential Banner */}
+        <div style={styles.confidentialityBanner}>
+          <span style={{ fontSize: '1.2rem' }}>🔒</span>
+          Your details are confidential and used only for <span style={{ fontWeight: '700' }}>medical consultation</span>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          {/* Section 1: Basic Details */}
+          <div style={styles.formSection}>
+            <div style={styles.sectionHeader}>
+              <div style={styles.iconCircle}>
+                <span style={{ fontSize: '1.2rem', marginTop: '-2px' }}>👤</span>
+              </div>
+              Basic Details
+            </div>
+
+            <div style={styles.row}>
+              <div>
+                <label style={styles.label}>Full Name</label>
+                <input
+                  type="text" required
+                  style={styles.input}
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  onFocus={handleFocus} onBlur={handleBlur}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Age</label>
+                <input
+                  type="number" required min="0" max="120"
+                  style={styles.input}
+                  value={formData.age}
+                  onChange={e => setFormData({ ...formData, age: e.target.value })}
+                  onFocus={handleFocus} onBlur={handleBlur}
+                />
+              </div>
+            </div>
+
+            <div style={styles.row}>
+              <div>
+                <label style={styles.label}>Mobile Number<span style={{ color: 'red' }}>*</span></label>
+                <div style={{ position: 'relative', display: 'flex' }}>
+                  <div style={{
+                    padding: '0.75rem', background: '#f9fafb', border: '1px solid #d1d5db',
+                    borderRight: 'none', borderRadius: '8px 0 0 8px', color: '#6b7280', fontSize: '0.95rem'
+                  }}>
+                    +91
+                  </div>
+                  <input
+                    type="tel" required
+                    style={{ ...styles.input, borderRadius: '0 8px 8px 0' }}
+                    placeholder="Enter mobile"
+                    value={formData.phone}
+                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                    onFocus={handleFocus} onBlur={handleBlur}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={styles.label}>Gender</label>
+                <select
+                  style={{ ...styles.input, background: 'white' }}
+                  value={formData.gender}
+                  onChange={e => setFormData({ ...formData, gender: e.target.value })}
+                  onFocus={handleFocus} onBlur={handleBlur}
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Problems */}
+          <div style={styles.formSection}>
+            <div style={styles.sectionHeader}>
+              <div style={styles.iconCircle}>
+                <span style={{ fontSize: '1.2rem' }}>📄</span>
+              </div>
+              What problem are you facing?
+            </div>
+
+            <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1rem' }}>
+              (You may write in your own words or leave it blank)
+            </p>
+
+            <textarea
+              style={{ ...styles.input, minHeight: '100px', resize: 'vertical' }}
+              placeholder="Describe your symptoms"
+              value={formData.symptoms}
+              onChange={e => setFormData({ ...formData, symptoms: e.target.value })}
+              onFocus={handleFocus} onBlur={handleBlur}
+            />
+          </div>
+
+          <div style={styles.footer}>
+            <button type="submit" style={styles.submitBtn}>
+              {submitting ? 'Please wait...' : 'Register for Free Consultation'}
+            </button>
+            <p style={styles.subtext}>Takes less than 30 seconds</p>
+          </div>
+        </form>
+
       </div>
-    </PageContainer>
+    </div>
   );
 }

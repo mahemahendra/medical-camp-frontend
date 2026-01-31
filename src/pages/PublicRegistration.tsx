@@ -150,7 +150,7 @@ export default function PublicRegistration() {
       fontSize: '0.85rem',
       color: '#4b5563',
       gap: '0.5rem',
-      float: 'right' as 'float', // Simple right align like screenshot
+      float: 'right' as const, // Simple right align like screenshot
       marginTop: '-3rem', // Negative margin to align with title area roughly
     },
     doctorList: {

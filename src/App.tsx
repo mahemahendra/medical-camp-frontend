@@ -20,6 +20,7 @@ const lazyWithRetry = (componentImport: () => Promise<any>) =>
 const PublicRegistration = lazyWithRetry(() => import('./pages/PublicRegistration'));
 const DoctorLogin = lazyWithRetry(() => import('./pages/DoctorLogin'));
 const DoctorDashboard = lazyWithRetry(() => import('./pages/DoctorDashboard'));
+const DoctorVisitorView = lazyWithRetry(() => import('./pages/DoctorVisitorView'));
 const CampHeadDashboard = lazyWithRetry(() => import('./pages/CampHeadDashboard'));
 const CampHeadDoctors = lazyWithRetry(() => import('./pages/CampHeadDoctors'));
 const CampHeadVisitors = lazyWithRetry(() => import('./pages/CampHeadVisitors'));
@@ -107,6 +108,10 @@ function App() {
             <Route
               path="/:campSlug/doctor"
               element={<ProtectedRoute><DoctorDashboard /></ProtectedRoute>}
+            />
+            <Route
+              path="/:campSlug/doctor/visitor/:visitorId"
+              element={<ProtectedRoute><DoctorVisitorView /></ProtectedRoute>}
             />
             <Route
               path="/:campSlug/doctor/my-patients"

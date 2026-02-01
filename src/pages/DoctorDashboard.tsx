@@ -361,36 +361,69 @@ export default function DoctorDashboard() {
 
 function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; onClose: () => void }) {
   const [manualInput, setManualInput] = useState('');
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCamera, setHasCamera] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState('');
+  const scannerRef = useRef<any>(null);
+  const scannerElementId = 'qr-scanner';
 
   useEffect(() => {
-    let stream: MediaStream | null = null;
+    let html5QrCode: any = null;
 
-    const startCamera = async () => {
+    const startScanner = async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setScanning(true);
-        }
-      } catch (err) {
-        console.error('Camera access denied:', err);
+        // Dynamically import html5-qrcode
+        const { Html5Qrcode } = await import('html5-qrcode');
+        
+        html5QrCode = new Html5Qrcode(scannerElementId);
+        scannerRef.current = html5QrCode;
+
+        // Start scanning
+        await html5QrCode.start(
+          { facingMode: 'environment' }, // Use back camera on mobile
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
+          },
+          (decodedText: string) => {
+            // QR code detected!
+            console.log('QR Code detected:', decodedText);
+            
+            // Extract visitor ID from URL if it's our QR code format
+            // Format: http://domain.com/{campSlug}/doctor/visitor/{visitorId}
+            const urlMatch = decodedText.match(/\/doctor\/visitor\/([a-f0-9-]+)/);
+            if (urlMatch) {
+              // It's a visitor URL QR code, navigate directly
+              window.location.href = decodedText;
+            } else {
+              // It's a patient ID or other data
+              onScan(decodedText);
+            }
+          },
+          (errorMessage: string) => {
+            // Scanning in progress, no QR code detected yet
+          }
+        );
+        
+        setScanning(true);
+      } catch (err: any) {
+        console.error('QR Scanner error:', err);
         setHasCamera(false);
+        setError(err.message || 'Camera not available');
       }
     };
 
-    startCamera();
+    startScanner();
 
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      // Cleanup
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch((err: any) => {
+          console.error('Error stopping scanner:', err);
+        });
       }
     };
-  }, []);
+  }, [onScan]);
 
   const handleManualSubmit = () => {
     if (manualInput.trim()) {
@@ -423,22 +456,25 @@ function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; o
 
         {hasCamera ? (
           <div style={{ marginBottom: '1rem' }}>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              style={{ width: '100%', borderRadius: '0.5rem', background: '#000' }}
+            <div
+              id={scannerElementId}
+              style={{ width: '100%', borderRadius: '0.5rem', overflow: 'hidden' }}
             />
             {scanning && (
-              <p style={{ textAlign: 'center', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
-                Point camera at patient's QR code
+              <p style={{ textAlign: 'center', color: 'var(--color-success)', marginTop: '0.5rem', fontWeight: 600 }}>
+                📷 Point camera at QR code
               </p>
             )}
           </div>
         ) : (
-          <p style={{ color: 'var(--color-error)', marginBottom: '1rem' }}>
-            Camera not available. Please enter Patient ID manually.
-          </p>
+          <div style={{ marginBottom: '1rem', padding: '1rem', background: '#fef2f2', borderRadius: '0.5rem' }}>
+            <p style={{ color: 'var(--color-error)', margin: 0 }}>
+              ⚠️ Camera not available. {error}
+            </p>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+              Please check camera permissions or enter Patient ID manually below.
+            </p>
+          </div>
         )}
 
         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1rem' }}>

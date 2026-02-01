@@ -54,7 +54,15 @@ export default function AdminCampsList() {
     }
 
     try {
-      await apiClient.delete(`/admin/camps/${id}`);\n      alert('✅ Camp deleted successfully!');\n      fetchData();\n    } catch (error: any) {\n      console.error('Failed to delete camp:', error);\n      const message = error.response?.data?.message || 'Failed to delete camp. Please try again.';\n      alert(`❌ Error: ${message}`);\n    }\n  };
+      await apiClient.delete(`/admin/camps/${id}`);
+      alert('✅ Camp deleted successfully!');
+      fetchData();
+    } catch (error: any) {
+      console.error('Failed to delete camp:', error);
+      const message = error.response?.data?.message || 'Failed to delete camp. Please try again.';
+      alert(`❌ Error: ${message}`);
+    }
+  };
 
   const handleLogout = () => {
     logout();

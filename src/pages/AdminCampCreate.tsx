@@ -19,9 +19,11 @@ export default function AdminCampCreate() {
     formDataToSend.append('hospitalPhone', data.hospitalPhone);
     formDataToSend.append('hospitalEmail', data.hospitalEmail);
     formDataToSend.append('name', data.name);
+    formDataToSend.append('description', data.description || '');
     formDataToSend.append('venue', data.venue);
     formDataToSend.append('startTime', new Date(data.startTime).toISOString());
     formDataToSend.append('endTime', new Date(data.endTime).toISOString());
+    formDataToSend.append('contactInfo', data.contactInfo || '');
 
     // Append files if selected (File objects, not strings)
     if (data.logo instanceof File) {

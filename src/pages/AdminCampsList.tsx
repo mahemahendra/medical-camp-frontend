@@ -46,15 +46,15 @@ export default function AdminCampsList() {
   };
 
   const handleDeleteCamp = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this camp?')) return;
+    const camp = camps.find(c => c.id === id);
+    const campName = camp?.name || 'this camp';
+    
+    if (!confirm(`⚠️ WARNING: This will permanently delete "${campName}" and ALL related data:\n\n• All doctors and camp head users\n• All registered visitors\n• All consultations and medical records\n• All attachments and files\n\nThis action CANNOT be undone!\n\nAre you sure you want to proceed?`)) {
+      return;
+    }
 
     try {
-      await apiClient.delete(`/admin/camps/${id}`);
-      fetchData();
-    } catch (error) {
-      console.error('Failed to delete camp:', error);
-    }
-  };
+      await apiClient.delete(`/admin/camps/${id}`);\n      alert('✅ Camp deleted successfully!');\n      fetchData();\n    } catch (error: any) {\n      console.error('Failed to delete camp:', error);\n      const message = error.response?.data?.message || 'Failed to delete camp. Please try again.';\n      alert(`❌ Error: ${message}`);\n    }\n  };
 
   const handleLogout = () => {
     logout();

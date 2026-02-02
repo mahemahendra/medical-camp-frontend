@@ -127,4 +127,5 @@ export interface Analytics {
   genderDistribution: Array<{ gender: string; count: number }>;
   ageDistribution: Array<{ ageGroup: string; count: number }>;
   doctorStats: Array<{ doctorName: string; visitCount: number }>;
+  followUpDistribution: Array<{ followUpAdvice: string; count: number }>;
 }

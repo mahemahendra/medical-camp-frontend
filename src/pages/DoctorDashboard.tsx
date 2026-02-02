@@ -104,8 +104,15 @@ export default function DoctorDashboard() {
         // Direct visitor ID from URL
         visitorId = urlMatch[1];
         const visitorResponse = await api.get(`/doctor/${user?.campId}/visitor-by-qr/${visitorId}`);
-        if (visitorResponse.data.visit) {
-          setSelectedVisit(visitorResponse.data.visit);
+        
+        if (visitorResponse.data.visit && visitorResponse.data.visitor) {
+          // Ensure visit has visitor data attached
+          const visitData = {
+            ...visitorResponse.data.visit,
+            visitor: visitorResponse.data.visitor
+          };
+          
+          setSelectedVisit(visitData);
           setShowConsultation(true);
           addToast({
             type: 'success',
@@ -143,11 +150,12 @@ export default function DoctorDashboard() {
         message: 'Could not find patient with this QR code or ID'
       });
     } catch (error: any) {
-      console.error('Scan search failed:', error);
+      console.error('QR Scan error details:', error);
+      console.error('Error response:', error.response?.data);
       addToast({
         type: 'error',
         title: 'Error',
-        message: error.response?.data?.message || 'Failed to search for patient'
+        message: error.response?.data?.error || error.response?.data?.message || 'Failed to search for patient'
       });
     } finally {
       setLoading(false);
@@ -1046,15 +1054,26 @@ function ConsultationModal({ visit, onSave, onClose }: {
 
             <div>
               <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600' }}>
-                Follow-up Advice
+                Follow-up Advice <span style={{ color: 'red' }}>*</span>
               </label>
-              <textarea
+              <select
                 value={formData.followUpAdvice}
                 onChange={(e) => setFormData({ ...formData, followUpAdvice: e.target.value })}
                 disabled={isViewMode}
-                rows={2}
+                required
                 style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid var(--color-border)' }}
-              />
+              >
+                <option value="">Select follow-up recommendation</option>
+                <option value="No Follow-up Required">No Follow-up Required</option>
+                <option value="Consult Specialist">Consult Specialist</option>
+                <option value="Surgery Required">Surgery Required</option>
+                <option value="Further Investigation Needed">Further Investigation Needed</option>
+                <option value="Follow-up in 1 Week">Follow-up in 1 Week</option>
+                <option value="Follow-up in 2 Weeks">Follow-up in 2 Weeks</option>
+                <option value="Follow-up in 1 Month">Follow-up in 1 Month</option>
+                <option value="Admitted to Hospital">Admitted to Hospital</option>
+                <option value="Referred to Higher Center">Referred to Higher Center</option>
+              </select>
             </div>
           </div>
 

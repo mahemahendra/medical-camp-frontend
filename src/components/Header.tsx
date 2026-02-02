@@ -246,10 +246,11 @@ export const HeaderSearch: React.FC<HeaderSearchProps> = ({
 // Page container with consistent background
 interface PageContainerProps {
   children: React.ReactNode;
+  style?: React.CSSProperties;
 }
 
-export const PageContainer: React.FC<PageContainerProps> = ({ children }) => (
-  <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
+export const PageContainer: React.FC<PageContainerProps> = ({ children, style }) => (
+  <div style={{ minHeight: '100vh', background: '#f8fafc', ...style }}>
     {children}
   </div>
 );

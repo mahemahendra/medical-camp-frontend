@@ -28,10 +28,18 @@ interface Doctor {
   campId: string;
 }
 
+interface CampHead {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  campId: string;
+}
+
 // Password Reset Modal Component (moved outside to prevent re-creation on renders)
 interface PasswordResetModalProps {
   show: boolean;
-  selectedDoctor: { id: string; name: string } | null;
+  selectedUser: { id: string; name: string; type: 'doctor' | 'campHead' } | null;
   passwordSettings: { mode: 'auto' | 'manual'; manualPassword: string };
   credentialLoading: string | null;
   onClose: () => void;
@@ -41,14 +49,16 @@ interface PasswordResetModalProps {
 
 function PasswordResetModal({
   show,
-  selectedDoctor,
+  selectedUser,
   passwordSettings,
   credentialLoading,
   onClose,
   onSubmit,
   onPasswordSettingsChange
 }: PasswordResetModalProps) {
-  if (!show || !selectedDoctor) return null;
+  if (!show || !selectedUser) return null;
+
+  const userTitle = selectedUser.type === 'doctor' ? 'Dr.' : 'Camp Head';
 
   const generateRandomPassword = () => {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
@@ -118,7 +128,7 @@ function PasswordResetModal({
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              🔐 Reset Password for Dr. {selectedDoctor.name}
+              🔐 Reset Password for {userTitle} {selectedUser.name}
             </h3>
             <button
               onClick={onClose}
@@ -152,7 +162,7 @@ function PasswordResetModal({
                   onChange={() => onPasswordSettingsChange({ ...passwordSettings, mode: 'auto' })}
                   style={{ margin: 0 }}
                 />
-                <span style={{ fontSize: '0.9rem' }}>🎲 Auto-generate password</span>
+                <span style={{ fontSize: '0.9rem' }}>Auto-generate password</span>
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                 <input
@@ -162,7 +172,7 @@ function PasswordResetModal({
                   onChange={() => onPasswordSettingsChange({ ...passwordSettings, mode: 'manual' })}
                   style={{ margin: 0 }}
                 />
-                <span style={{ fontSize: '0.9rem' }}>✏️ Set password manually</span>
+                <span style={{ fontSize: '0.9rem' }}>Set password manually</span>
               </label>
             </div>
           </div>
@@ -194,7 +204,7 @@ function PasswordResetModal({
 
               <div style={{ marginBottom: '1rem' }}>
                 <label style={labelStyle}>
-                  New Password for Dr. {selectedDoctor.name}
+                  New Password for {userTitle} {selectedUser.name}
                 </label>
                 <input
                   type="text"
@@ -237,9 +247,9 @@ function PasswordResetModal({
             type="button"
             variant="primary"
             onClick={onSubmit}
-            disabled={!canSubmit() || credentialLoading === selectedDoctor.id}
+            disabled={!canSubmit() || credentialLoading === selectedUser.id}
           >
-            {credentialLoading === selectedDoctor.id ? '⏳ Resetting...' : '🔑 Reset Password'}
+            {credentialLoading === selectedUser.id ? '⏳ Resetting...' : '🔑 Reset Password'}
           </Button>
         </div>
       </div>
@@ -254,6 +264,7 @@ export default function AdminCampManage() {
   const { addToast } = useToast();
   const { showAlert, AlertComponent } = useAlert();
   const [camp, setCamp] = useState<CampDetails | null>(null);
+  const [campHead, setCampHead] = useState<CampHead | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [credentialLoading, setCredentialLoading] = useState<string | null>(null);
@@ -261,7 +272,7 @@ export default function AdminCampManage() {
 
   // Password Reset Modal State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [selectedDoctor, setSelectedDoctor] = useState<{ id: string; name: string } | null>(null);
+  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; type: 'doctor' | 'campHead' } | null>(null);
   const [passwordSettings, setPasswordSettings] = useState({
     mode: 'auto' as 'auto' | 'manual',
     manualPassword: ''
@@ -277,29 +288,49 @@ export default function AdminCampManage() {
 
   const fetchCampData = async () => {
     try {
-      const [campResponse, doctorsResponse] = await Promise.all([
-        apiClient.get(`/admin/camps/${campId}`),
+      // Fetch camp details first
+      const campResponse = await apiClient.get(`/admin/camps/${campId}`);
+      setCamp(campResponse.data.camp);
+
+      // Fetch camp head and doctors (these can fail independently)
+      const [campHeadResult, doctorsResult] = await Promise.allSettled([
+        apiClient.get(`/admin/camps/${campId}/camp-head`),
         apiClient.get(`/admin/camps/${campId}/doctors`)
       ]);
 
-      setCamp(campResponse.data.camp);
-      setDoctors(doctorsResponse.data.doctors || []);
+      // Handle camp head result
+      if (campHeadResult.status === 'fulfilled') {
+        setCampHead(campHeadResult.value.data.campHead);
+      } else {
+        setCampHead(null);
+      }
+
+      // Handle doctors result
+      if (doctorsResult.status === 'fulfilled') {
+        setDoctors(doctorsResult.value.data.doctors || []);
+      } else {
+        setDoctors([]);
+      }
     } catch (error) {
-      console.error('Failed to fetch camp data:', error);
-      navigate('/admin/dashboard');
+      addToast({
+        type: 'error',
+        title: 'Failed to Load Camp',
+        message: 'Unable to load camp details. Redirecting to dashboard...'
+      });
+      setTimeout(() => navigate('/admin/dashboard'), 2000);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResetPassword = async (doctorId: string, doctorName: string) => {
-    setSelectedDoctor({ id: doctorId, name: doctorName });
+  const handleResetPassword = async (userId: string, userName: string, userType: 'doctor' | 'campHead') => {
+    setSelectedUser({ id: userId, name: userName, type: userType });
     setPasswordSettings({ mode: 'auto', manualPassword: '' });
     setShowPasswordModal(true);
   };
 
   const handlePasswordModalSubmit = async () => {
-    if (!selectedDoctor) return;
+    if (!selectedUser) return;
 
     // Validate manual password if mode is manual
     if (passwordSettings.mode === 'manual' && passwordSettings.manualPassword.length < 8) {
@@ -311,7 +342,7 @@ export default function AdminCampManage() {
       return;
     }
 
-    setCredentialLoading(selectedDoctor.id);
+    setCredentialLoading(selectedUser.id);
     setShowPasswordModal(false);
 
     try {
@@ -323,10 +354,15 @@ export default function AdminCampManage() {
         payload.manualPassword = passwordSettings.manualPassword;
       }
 
-      const response = await apiClient.post(`/admin/doctors/${selectedDoctor.id}/reset-password`, payload);
+      const endpoint = selectedUser.type === 'doctor' 
+        ? `/admin/doctors/${selectedUser.id}/reset-password`
+        : `/admin/camp-heads/${selectedUser.id}/reset-password`;
 
+      const response = await apiClient.post(endpoint, payload);
+
+      const userTitle = selectedUser.type === 'doctor' ? 'Dr.' : 'Camp Head';
       const modeText = passwordSettings.mode === 'manual' ? 'set manually' : 'auto-generated';
-      setSuccessMessage(`Password ${modeText} for Dr. ${selectedDoctor.name}. New password: ${response.data.tempPassword}`);
+      setSuccessMessage(`Password ${modeText} for ${userTitle} ${selectedUser.name}. New password: ${response.data.tempPassword}`);
       setTimeout(() => setSuccessMessage(''), 10000);
     } catch (error: any) {
       addToast({
@@ -336,7 +372,7 @@ export default function AdminCampManage() {
       });
     } finally {
       setCredentialLoading(null);
-      setSelectedDoctor(null);
+      setSelectedUser(null);
     }
   };
 
@@ -549,17 +585,106 @@ export default function AdminCampManage() {
           </div>
         </div>
 
+        {/* Camp Head Section */}
+        {campHead ? (
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            marginBottom: '2rem',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            border: '2px solid #dbeafe'
+          }}>
+            <h2 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem 0', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              👤 Camp Head
+            </h2>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '2rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Name:</span>
+                  <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '1.1rem' }}>{campHead.name}</div>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Email:</span>
+                  <div style={{ fontWeight: '500', color: '#334155' }}>
+                    📧 {campHead.email}
+                  </div>
+                </div>
+                {campHead.phone && (
+                  <div>
+                    <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Phone:</span>
+                    <div style={{ color: '#334155' }}>
+                      📞 {campHead.phone}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <button
+                  onClick={() => handleResetPassword(campHead.id, campHead.name, 'campHead')}
+                  disabled={credentialLoading === campHead.id}
+                  style={{
+                    background: credentialLoading === campHead.id ? '#e2e8f0' : 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
+                    color: 'white',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '10px',
+                    border: 'none',
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    cursor: credentialLoading === campHead.id ? 'not-allowed' : 'pointer',
+                    transition: 'transform 0.2s',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (credentialLoading !== campHead.id) {
+                      (e.target as HTMLElement).style.transform = 'translateY(-2px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.target as HTMLElement).style.transform = 'translateY(0)';
+                  }}
+                >
+                  {credentialLoading === campHead.id ? '⏳ Resetting...' : '🔑 Reset Password'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            background: '#fff3cd',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            marginBottom: '2rem',
+            border: '1px solid #ffc107'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+              <div>
+                <h3 style={{ margin: 0, color: '#856404', fontSize: '1rem' }}>No Camp Head Assigned</h3>
+                <p style={{ margin: '0.25rem 0 0 0', color: '#856404', fontSize: '0.9rem' }}>
+                  This camp does not have a camp head user yet.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Doctors Management */}
         <DoctorsDataGrid
           doctors={doctors}
-          onResetPassword={handleResetPassword}
+          onResetPassword={(doctorId, doctorName) => handleResetPassword(doctorId, doctorName, 'doctor')}
           credentialLoading={credentialLoading}
         />
       </ContentContainer>
 
       <PasswordResetModal
         show={showPasswordModal}
-        selectedDoctor={selectedDoctor}
+        selectedUser={selectedUser}
         passwordSettings={passwordSettings}
         credentialLoading={credentialLoading}
         onClose={() => setShowPasswordModal(false)}

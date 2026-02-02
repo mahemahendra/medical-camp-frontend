@@ -104,14 +104,19 @@ export default function DoctorDashboard() {
       const visitors = response.data.visitors || [];
       
       if (visitors.length > 0) {
-        const visitorResponse = await api.get(`/doctor/${user?.campId}/visitors/${visitors[0].id}`);
+        const visitor = visitors[0];
+        const visitorResponse = await api.get(`/doctor/${user?.campId}/visitors/${visitor.id}`);
+        
         if (visitorResponse.data.visits?.length > 0) {
-          setSelectedVisit(visitorResponse.data.visits[0]);
+          const visit = visitorResponse.data.visits[0];
+          
+          // Pass only visit.id to modal - it will fetch all data itself
+          setSelectedVisit({ id: visit.id } as Visit);
           setShowConsultation(true);
           addToast({
             type: 'success',
             title: 'Patient Found',
-            message: `Opening consultation for ${visitors[0].name}`
+            message: `Opening consultation for ${visitor.name}`
           });
           return;
         }
@@ -137,7 +142,8 @@ export default function DoctorDashboard() {
   };
 
   const handleConsultClick = (visit: Visit) => {
-    setSelectedVisit(visit);
+    // Pass only visit.id to modal - it will fetch all data itself
+    setSelectedVisit({ id: visit.id } as Visit);
     setShowConsultation(true);
   };
 
@@ -382,17 +388,37 @@ function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; o
   const [manualInput, setManualInput] = useState('');
   const [hasCamera, setHasCamera] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [wantsToScan, setWantsToScan] = useState(false);
   const [error, setError] = useState('');
   const scannerRef = useRef<any>(null);
+  const isMountedRef = useRef(true);
   const scannerElementId = 'qr-scanner';
 
   useEffect(() => {
+    isMountedRef.current = true;
+    
+    return () => {
+      // Cleanup
+      isMountedRef.current = false;
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch((err: any) => {
+          console.error('Error stopping scanner:', err);
+        });
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!wantsToScan) return;
+    
     let html5QrCode: any = null;
 
     const startScanner = async () => {
       try {
         // Dynamically import html5-qrcode
         const { Html5Qrcode } = await import('html5-qrcode');
+        
+        if (!isMountedRef.current) return;
         
         html5QrCode = new Html5Qrcode(scannerElementId);
         scannerRef.current = html5QrCode;
@@ -408,13 +434,14 @@ function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; o
             // QR code detected!
             console.log('QR Code detected:', decodedText);
             
-            // Always use the onScan callback to handle the scanned data
-            // This will search for the patient and open consultation form
-            onScan(decodedText);
-            
-            // Stop the scanner after successful scan
-            if (scannerRef.current) {
-              scannerRef.current.stop().catch(console.error);
+            // Stop the scanner first
+            if (scannerRef.current && isMountedRef.current) {
+              scannerRef.current.stop().then(() => {
+                // Call onScan after scanner is stopped
+                if (isMountedRef.current) {
+                  onScan(decodedText);
+                }
+              }).catch(console.error);
             }
           },
           (errorMessage: string) => {
@@ -422,25 +449,20 @@ function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; o
           }
         );
         
-        setScanning(true);
+        if (isMountedRef.current) {
+          setScanning(true);
+        }
       } catch (err: any) {
         console.error('QR Scanner error:', err);
-        setHasCamera(false);
-        setError(err.message || 'Camera not available');
+        if (isMountedRef.current) {
+          setHasCamera(false);
+          setError(err.message || 'Camera not available');
+        }
       }
     };
-
+    
     startScanner();
-
-    return () => {
-      // Cleanup
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch((err: any) => {
-          console.error('Error stopping scanner:', err);
-        });
-      }
-    };
-  }, [onScan]);
+  }, [wantsToScan]);
 
   const handleManualSubmit = () => {
     if (manualInput.trim()) {
@@ -471,7 +493,30 @@ function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; o
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
         </div>
 
-        {hasCamera ? (
+        {!wantsToScan ? (
+          <div style={{ marginBottom: '1rem' }}>
+            <button
+              onClick={() => setWantsToScan(true)}
+              style={{
+                width: '100%',
+                padding: '1rem',
+                background: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                marginBottom: '1rem'
+              }}
+            >
+              📷 Start Camera Scanner
+            </button>
+            <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
+              Or enter Patient ID manually below
+            </div>
+          </div>
+        ) : hasCamera ? (
           <div style={{ marginBottom: '1rem' }}>
             <div
               id={scannerElementId}
@@ -495,7 +540,7 @@ function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; o
         )}
 
         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1rem' }}>
-          <p style={{ marginBottom: '0.5rem', fontWeight: '500' }}>Or enter Patient ID manually:</p>
+          <p style={{ marginBottom: '0.5rem', fontWeight: '500' }}>Enter Patient ID manually:</p>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <input
               type="text"
@@ -518,51 +563,59 @@ function ConsultationModal({ visit, onSave, onClose }: {
   onSave: (data: any) => void;
   onClose: () => void
 }) {
+  const { user } = useAuthStore();
+  const [loading, setLoading] = useState(true);
+  const [visitData, setVisitData] = useState<Visit | null>(null);
   const [formData, setFormData] = useState({
-    chiefComplaints: visit.consultation?.chiefComplaints || visit.visitor?.symptoms || '',
-    clinicalNotes: visit.consultation?.clinicalNotes || '',
-    diagnosis: visit.consultation?.diagnosis || '',
-    treatmentPlan: visit.consultation?.treatmentPlan || '',
-    prescriptions: visit.consultation?.prescriptions || [{ name: '', dosage: '', frequency: '', duration: '' }],
-    followUpAdvice: visit.consultation?.followUpAdvice || '',
-    isInsured: visit.consultation?.isInsured || false
+    chiefComplaints: '',
+    clinicalNotes: '',
+    diagnosis: '',
+    treatmentPlan: '',
+    prescriptions: [{ name: '', dosage: '', frequency: '', duration: '' }],
+    followUpAdvice: '',
+    isInsured: false
   });
   const [saving, setSaving] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
-  const [visitWithAttachments, setVisitWithAttachments] = useState<Visit>(visit);
-  const isViewMode = visit.status === 'COMPLETED';
+  const isViewMode = visitData?.status === 'COMPLETED';
 
-  // Fetch visit details with attachments when modal opens
+  // Fetch visit details with all relations when modal opens
   useEffect(() => {
     const fetchVisitDetails = async () => {
+      if (!visit?.id || !user?.campId) {
+        console.error('Missing visit.id or user.campId:', { visitId: visit?.id, campId: user?.campId });
+        setLoading(false);
+        return;
+      }
+
       try {
-        const response = await api.get(`/doctor/${visit.visitor?.campId}/visits/${visit.id}`);
-        setVisitWithAttachments(response.data.visit);
+        setLoading(true);
+        console.log('Fetching visit details for:', visit.id);
+        const response = await api.get(`/doctor/${user.campId}/visits/${visit.id}`);
+        console.log('Visit details response:', response.data);
+        const fetchedVisit = response.data.visit;
+        setVisitData(fetchedVisit);
 
-        // Sync formData with fetched visit details
-        const consultation = response.data.visit?.consultation;
-
-        if (consultation) {
-          setFormData(prev => ({
-            ...prev,
-            chiefComplaints: consultation.chiefComplaints || prev.chiefComplaints,
-            clinicalNotes: consultation.clinicalNotes || prev.clinicalNotes,
-            diagnosis: consultation.diagnosis || prev.diagnosis,
-            treatmentPlan: consultation.treatmentPlan || prev.treatmentPlan,
-            prescriptions: consultation.prescriptions || prev.prescriptions,
-            followUpAdvice: consultation.followUpAdvice || prev.followUpAdvice,
-            isInsured: consultation.isInsured !== undefined ? consultation.isInsured : prev.isInsured
-          }));
-        }
+        // Populate form with existing data
+        setFormData({
+          chiefComplaints: fetchedVisit.consultation?.chiefComplaints || fetchedVisit.visitor?.symptoms || '',
+          clinicalNotes: fetchedVisit.consultation?.clinicalNotes || '',
+          diagnosis: fetchedVisit.consultation?.diagnosis || '',
+          treatmentPlan: fetchedVisit.consultation?.treatmentPlan || '',
+          prescriptions: fetchedVisit.consultation?.prescriptions || [{ name: '', dosage: '', frequency: '', duration: '' }],
+          followUpAdvice: fetchedVisit.consultation?.followUpAdvice || '',
+          isInsured: fetchedVisit.consultation?.isInsured || false
+        });
       } catch (error) {
         console.error('Failed to fetch visit details:', error);
-        // Fallback to original visit data
-        setVisitWithAttachments(visit);
+        alert('Failed to load consultation data. Please try again.');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchVisitDetails();
-  }, [visit.id, visit.visitor?.campId]);
+  }, [visit?.id, user?.campId]);
 
   const handlePrescriptionChange = (index: number, field: string, value: string) => {
     const updated = [...formData.prescriptions];
@@ -607,7 +660,7 @@ function ConsultationModal({ visit, onSave, onClose }: {
         uploadFormData.append('files', file);
       });
 
-      const response = await api.post(`/doctor/${visitWithAttachments.visitor?.campId}/attachments`, uploadFormData, {
+      await api.post(`/doctor/${user?.campId}/attachments`, uploadFormData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -627,8 +680,8 @@ function ConsultationModal({ visit, onSave, onClose }: {
 
   const fetchVisitAttachments = async () => {
     try {
-      const response = await api.get(`/doctor/${visitWithAttachments.visitor?.campId}/visits/${visit.id}`);
-      setVisitWithAttachments(response.data.visit);
+      const response = await api.get(`/doctor/${user?.campId}/visits/${visit.id}`);
+      setVisitData(response.data.visit);
     } catch (error) {
       console.error('Failed to fetch visit attachments:', error);
     }
@@ -640,7 +693,7 @@ function ConsultationModal({ visit, onSave, onClose }: {
     }
 
     try {
-      await api.delete(`/doctor/${visitWithAttachments.visitor?.campId}/attachments/${attachmentId}`);
+      await api.delete(`/doctor/${user?.campId}/attachments/${attachmentId}`);
       // Refresh attachments list
       await fetchVisitAttachments();
     } catch (error) {
@@ -653,9 +706,14 @@ function ConsultationModal({ visit, onSave, onClose }: {
     e.preventDefault();
     if (isViewMode) return;
 
-    setSaving(true);
-    await onSave(formData);
-    setSaving(false);
+    try {
+      setSaving(true);
+      await onSave(formData);
+      setSaving(false);
+    } catch (error) {
+      console.error('Error saving consultation:', error);
+      setSaving(false);
+    }
   };
 
   return (
@@ -690,34 +748,43 @@ function ConsultationModal({ visit, onSave, onClose }: {
           <div>
             <h2 style={{ margin: 0 }}>{isViewMode ? 'View Consultation' : 'Record Consultation'}</h2>
             <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>
-              Patient: {visit.visitor?.name} ({visit.visitor?.patientIdPerCamp})
+              {loading ? 'Loading...' : `Patient: ${visitData?.visitor?.name || 'N/A'} (${visitData?.visitor?.patientIdPerCamp || 'N/A'})`}
             </p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
         </div>
 
-        {/* Patient Info */}
-        <div style={{ padding: '1rem 1.5rem', background: '#eff6ff', borderBottom: '1px solid var(--color-border)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
-            <div><strong>Age:</strong> {visit.visitor?.age} yrs</div>
-            <div><strong>Gender:</strong> {visit.visitor?.gender}</div>
-            <div><strong>Phone:</strong> {visit.visitor?.phone}</div>
-            <div><strong>Address:</strong> {visit.visitor?.city || visit.visitor?.address || '-'}</div>
+        {/* Loading State */}
+        {loading ? (
+          <div style={{ padding: '3rem', textAlign: 'center' }}>
+            <div className="loading" style={{ margin: '0 auto' }}>Loading consultation data...</div>
           </div>
-          {visit.visitor?.existingConditions && (
-            <div style={{ marginTop: '0.5rem' }}>
-              <strong>Existing Conditions:</strong> {visit.visitor.existingConditions}
-            </div>
-          )}
-          {visit.visitor?.allergies && (
-            <div style={{ marginTop: '0.25rem', color: '#dc2626' }}>
-              <strong>⚠️ Allergies:</strong> {visit.visitor.allergies}
-            </div>
-          )}
-        </div>
+        ) : (
+          <>
+            {/* Patient Info */}
+            {visitData && (
+              <div style={{ padding: '1rem 1.5rem', background: '#eff6ff', borderBottom: '1px solid var(--color-border)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+                  <div><strong>Age:</strong> {visitData.visitor?.age} yrs</div>
+                  <div><strong>Gender:</strong> {visitData.visitor?.gender}</div>
+                  <div><strong>Phone:</strong> {visitData.visitor?.phone}</div>
+                  <div><strong>Address:</strong> {visitData.visitor?.city || visitData.visitor?.address || '-'}</div>
+                </div>
+                {visitData.visitor?.existingConditions && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <strong>Existing Conditions:</strong> {visitData.visitor.existingConditions}
+                  </div>
+                )}
+                {visitData.visitor?.allergies && (
+                  <div style={{ marginTop: '0.25rem', color: '#dc2626' }}>
+                    <strong>⚠️ Allergies:</strong> {visitData.visitor.allergies}
+                  </div>
+                )}
+              </div>
+            )}
 
-        {/* Consultation Form */}
-        <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+            {/* Consultation Form */}
+            <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
           <div style={{ display: 'grid', gap: '1rem' }}>
             {/* Extended Patient Info - Insurance */}
             <div style={{
@@ -903,7 +970,7 @@ function ConsultationModal({ visit, onSave, onClose }: {
               )}
 
               {/* Show existing attachments */}
-              {visitWithAttachments.attachments && visitWithAttachments.attachments.length > 0 && (
+              {visitData && visitData.attachments && visitData.attachments.length > 0 && (
                 <div style={{
                   display: 'grid',
                   gap: '0.5rem',
@@ -913,7 +980,7 @@ function ConsultationModal({ visit, onSave, onClose }: {
                   padding: '1rem'
                 }}>
                   <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#374151' }}>Existing Attachments:</h4>
-                  {visitWithAttachments.attachments.map((attachment: any, index: number) => (
+                  {visitData.attachments.map((attachment: any, index: number) => (
                     <div key={index} style={{
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -993,7 +1060,7 @@ function ConsultationModal({ visit, onSave, onClose }: {
                 </div>
               )}
 
-              {(!visitWithAttachments.attachments || visitWithAttachments.attachments.length === 0) && uploadingFiles.length === 0 && (
+              {(!visitData || !visitData.attachments || visitData.attachments.length === 0) && uploadingFiles.length === 0 && (
                 <div style={{
                   padding: '2rem',
                   textAlign: 'center',
@@ -1074,6 +1141,8 @@ function ConsultationModal({ visit, onSave, onClose }: {
             )}
           </div>
         </form>
+        </>
+        )}
       </div>
     </div>
   );

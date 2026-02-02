@@ -94,52 +94,26 @@ export default function DoctorDashboard() {
     setLoading(true);
     
     try {
-      let visitorId: string | null = null;
+      // QR code contains only Patient ID (e.g., "ABC123-0001")
+      const patientId = patientIdOrUrl.trim();
       
-      // Check if it's a visitor URL (from QR code)
-      // Format: http://domain.com/{campSlug}/doctor/visitor/{visitorId}
-      const urlMatch = patientIdOrUrl.match(/\/doctor\/visitor\/([a-f0-9-]+)/);
+      // Search by patient ID
+      const response = await api.get(`/doctor/${user?.campId}/visitors/search`, {
+        params: { query: patientId }
+      });
+      const visitors = response.data.visitors || [];
       
-      if (urlMatch) {
-        // Direct visitor ID from URL
-        visitorId = urlMatch[1];
-        const visitorResponse = await api.get(`/doctor/${user?.campId}/visitor-by-qr/${visitorId}`);
-        
-        if (visitorResponse.data.visit && visitorResponse.data.visitor) {
-          // Ensure visit has visitor data attached
-          const visitData = {
-            ...visitorResponse.data.visit,
-            visitor: visitorResponse.data.visitor
-          };
-          
-          setSelectedVisit(visitData);
+      if (visitors.length > 0) {
+        const visitorResponse = await api.get(`/doctor/${user?.campId}/visitors/${visitors[0].id}`);
+        if (visitorResponse.data.visits?.length > 0) {
+          setSelectedVisit(visitorResponse.data.visits[0]);
           setShowConsultation(true);
           addToast({
             type: 'success',
             title: 'Patient Found',
-            message: `Opening consultation for ${visitorResponse.data.visitor.name}`
+            message: `Opening consultation for ${visitors[0].name}`
           });
           return;
-        }
-      } else {
-        // Search by patient ID
-        const response = await api.get(`/doctor/${user?.campId}/visitors/search`, {
-          params: { query: patientIdOrUrl }
-        });
-        const visitors = response.data.visitors || [];
-        
-        if (visitors.length > 0) {
-          const visitorResponse = await api.get(`/doctor/${user?.campId}/visitors/${visitors[0].id}`);
-          if (visitorResponse.data.visits?.length > 0) {
-            setSelectedVisit(visitorResponse.data.visits[0]);
-            setShowConsultation(true);
-            addToast({
-              type: 'success',
-              title: 'Patient Found',
-              message: `Opening consultation for ${visitors[0].name}`
-            });
-            return;
-          }
         }
       }
       
@@ -147,7 +121,7 @@ export default function DoctorDashboard() {
       addToast({
         type: 'error',
         title: 'Patient Not Found',
-        message: 'Could not find patient with this QR code or ID'
+        message: `Could not find patient with ID: ${patientId}`
       });
     } catch (error: any) {
       console.error('QR Scan error details:', error);

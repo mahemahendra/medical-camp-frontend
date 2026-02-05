@@ -933,6 +933,8 @@ function ConsultationModal({ visit, onSave, onClose }: {
   );
 }
 
+import jsQR from 'jsqr';
+
 // Simple QR Scanner Modal Component
 function QRScannerModal({ onScan, onClose }: { onScan: (data: string) => void; onClose: () => void }) {
   const [manualInput, setManualInput] = useState('');
@@ -991,20 +993,32 @@ function QRScannerModal({ onScan, onClose }: { onScan: (data: string) => void; o
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
     try {
-      // Use BarcodeDetector API if available
+      // Use BarcodeDetector API if available (faster, native)
       if ('BarcodeDetector' in window) {
         const barcodeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
-        const barcodes = await barcodeDetector.detect(canvas);
+        const barcodes = await barcodeDetector.detect(imageData);
         if (barcodes.length > 0) {
           stopScanner();
           onScan(barcodes[0].rawValue);
           return;
         }
       }
+
+      // Fallback to jsQR if BarcodeDetector is not supported or fails
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'dontInvert',
+      });
+
+      if (code) {
+        stopScanner();
+        onScan(code.data);
+        return;
+      }
     } catch (err) {
-      // BarcodeDetector not supported or failed, continue scanning
+      // Errors can happen if the image is not ready, just continue scanning
     }
 
     // Continue scanning

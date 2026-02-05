@@ -946,27 +946,36 @@ function QRScannerModal({ onScan, onClose }: { onScan: (data: string) => void; o
   // Start camera and scan for QR codes
   const startScanner = async () => {
     setError('');
+    setScannerActive(true);
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        }
       });
       streamRef.current = stream;
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
-        setScannerActive(true);
-        scanQRCode();
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().then(() => {
+            scanQRCode();
+          }).catch(console.error);
+        };
       }
     } catch (err: any) {
       setError('Camera access denied. Please allow camera permission or enter Patient ID manually.');
+      setScannerActive(false);
       console.error('Camera error:', err);
     }
   };
 
   // Scan QR code from video stream
   const scanQRCode = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current || !streamRef.current) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -979,8 +988,8 @@ function QRScannerModal({ onScan, onClose }: { onScan: (data: string) => void; o
       return;
     }
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     try {
@@ -1010,6 +1019,9 @@ function QRScannerModal({ onScan, onClose }: { onScan: (data: string) => void; o
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setScannerActive(false);
   };
@@ -1112,35 +1124,46 @@ function QRScannerModal({ onScan, onClose }: { onScan: (data: string) => void; o
             )}
           </div>
         ) : (
-          <div style={{ marginBottom: '1rem', position: 'relative' }}>
-            <video
-              ref={videoRef}
-              style={{
-                width: '100%',
-                borderRadius: '0.5rem',
-                background: '#000'
-              }}
-              playsInline
-              muted
-            />
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ 
+              position: 'relative', 
+              width: '100%',
+              aspectRatio: '4/3',
+              background: '#000',
+              borderRadius: '0.5rem',
+              overflow: 'hidden'
+            }}>
+              <video
+                ref={videoRef}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }}
+                playsInline
+                muted
+                autoPlay
+              />
+              {/* Scanning overlay */}
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '180px',
+                height: '180px',
+                border: '3px solid #10b981',
+                borderRadius: '1rem',
+                boxShadow: '0 0 0 9999px rgba(0,0,0,0.4)'
+              }} />
+            </div>
             <canvas ref={canvasRef} style={{ display: 'none' }} />
-            {/* Scanning overlay */}
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '200px',
-              height: '200px',
-              border: '3px solid #10b981',
-              borderRadius: '1rem',
-              boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)'
-            }} />
             <p style={{ 
               textAlign: 'center', 
               color: '#10b981', 
               marginTop: '0.75rem',
-              fontWeight: '600'
+              fontWeight: '600',
+              marginBottom: '0.5rem'
             }}>
               📷 Point camera at QR code...
             </p>
@@ -1148,7 +1171,6 @@ function QRScannerModal({ onScan, onClose }: { onScan: (data: string) => void; o
               onClick={stopScanner}
               style={{
                 width: '100%',
-                marginTop: '0.5rem',
                 padding: '0.5rem',
                 background: '#ef4444',
                 color: 'white',

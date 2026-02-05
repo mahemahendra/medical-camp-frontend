@@ -89,47 +89,29 @@ export default function DoctorDashboard() {
     }
   };
 
-  const handleQRScan = async (patientIdOrUrl: string) => {
+  const handleQRScan = (patientIdOrUrl: string) => {
     setShowScanner(false);
     
+    let patientId = patientIdOrUrl.trim();
+    
+    // QR code contains JSON: {"campId":"...", "patientId":"ABC123-0001"}
+    // Try parsing as JSON first
     try {
-      let patientId: string;
-      
-      // QR code contains JSON: {"campId":"...", "patientId":"ABC123-0001"}
-      // Try parsing as JSON first
-      try {
-        const qrData = JSON.parse(patientIdOrUrl.trim());
-        patientId = qrData.patientId || qrData.patientIdPerCamp || patientIdOrUrl.trim();
-        console.log('Parsed QR data:', qrData);
-        console.log('Extracted patient ID:', patientId);
-      } catch (parseError) {
-        // If JSON parse fails, treat it as plain patient ID
-        patientId = patientIdOrUrl.trim();
-        console.log('Using plain patient ID:', patientId);
-      }
-      
-      // Show scanned data in search input
-      setSearchQuery(patientId);
-      
-      addToast({
-        type: 'success',
-        title: 'QR Code Scanned',
-        message: `Scanned: ${patientId}. Click Search to find patient.`
-      });
-      
-      // Optionally auto-trigger search after a short delay
-      setTimeout(() => {
-        handleSearch();
-      }, 500);
-      
-    } catch (error: any) {
-      console.error('QR Scan error details:', error);
-      addToast({
-        type: 'error',
-        title: 'Scan Error',
-        message: 'Failed to process QR code. Please try manual entry.'
-      });
+      const qrData = JSON.parse(patientIdOrUrl.trim());
+      patientId = qrData.patientId || qrData.patientIdPerCamp || patientIdOrUrl.trim();
+    } catch (parseError) {
+      // If JSON parse fails, treat it as plain patient ID
+      patientId = patientIdOrUrl.trim();
     }
+    
+    // Show scanned data in search input
+    setSearchQuery(patientId);
+    
+    addToast({
+      type: 'success',
+      title: 'QR Scanned Successfully',
+      message: `Patient ID: ${patientId} - Now click Search button`
+    });
   };
 
   const handleConsultClick = (visit: Visit) => {

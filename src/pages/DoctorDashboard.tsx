@@ -61,8 +61,8 @@ export default function DoctorDashboard() {
   };
 
   const handleSearch = async (customQuery?: string) => {
-    const queryToUse = customQuery || searchQuery;
-    if (!queryToUse.trim()) {
+    const queryToUse = customQuery || searchQuery || '';
+    if (!queryToUse.toString().trim()) {
       loadVisitors();
       return;
     }
@@ -70,21 +70,13 @@ export default function DoctorDashboard() {
     setLoading(true);
     try {
       const response = await api.get(`/doctor/${user?.campId}/visitors/search`, {
-        params: { query: queryToUse }
+        params: { query: queryToUse.toString().trim() }
       });
-      const visitors = response.data.visitors || [];
-      if (visitors.length > 0) {
-        // For simplicity, get visits for the first matching visitor
-        const visitorResponse = await api.get(`/doctor/${user?.campId}/visitors/${visitors[0].id}`);
-        setVisits(visitorResponse.data.visits || []);
-        if (visitorResponse.data.visits?.length > 0) {
-          setSelectedVisit(visitorResponse.data.visits[0]);
-        }
-      } else {
-        setVisits([]);
-      }
+      // Search endpoint should return same structure as /visitors: { visits: [...] }
+      setVisits(response.data.visits || []);
     } catch (error) {
       console.error('Search failed:', error);
+      setVisits([]);
     } finally {
       setLoading(false);
     }
@@ -247,7 +239,7 @@ export default function DoctorDashboard() {
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               style={{ flex: 1, minWidth: '200px' }}
             />
-            <Button onClick={handleSearch} variant="primary">
+            <Button onClick={() => handleSearch(searchQuery)} variant="primary">
               🔍 Search
             </Button>
             <Button onClick={() => setShowScanner(true)} style={{ background: '#10b981', color: 'white' }}>
@@ -319,7 +311,7 @@ export default function DoctorDashboard() {
           onScan={(data) => {
             setShowScanner(false);
             // QR code now contains only the patient ID
-            const patientId = data.trim();
+            const patientId = String(data || '').trim();
             setSearchQuery(patientId);
             // Automatically trigger search with the scanned patientId
             handleSearch(patientId);

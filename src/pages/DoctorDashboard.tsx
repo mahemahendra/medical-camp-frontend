@@ -317,14 +317,8 @@ export default function DoctorDashboard() {
         <QRScannerModal
           onScan={(data) => {
             setShowScanner(false);
-            // Extract patient ID from scanned data
-            let patientId = data.trim();
-            try {
-              const parsed = JSON.parse(data);
-              patientId = parsed.patientId || parsed.patientIdPerCamp || data.trim();
-            } catch {
-              // Not JSON, use as-is
-            }
+            // Treat the entire scanned data as the patient ID
+            const patientId = data.trim();
             setSearchQuery(patientId);
           }}
           onClose={() => setShowScanner(false)}

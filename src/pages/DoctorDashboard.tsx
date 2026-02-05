@@ -364,9 +364,7 @@ function ConsultationModal({ visit, onSave, onClose }: {
 
       try {
         setLoading(true);
-        console.log('Fetching visit details for:', visit.id);
         const response = await api.get(`/doctor/${user.campId}/visits/${visit.id}`);
-        console.log('Visit details response:', response.data);
         const fetchedVisit = response.data.visit;
         setVisitData(fetchedVisit);
 

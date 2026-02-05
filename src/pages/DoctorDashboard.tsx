@@ -89,29 +89,18 @@ export default function DoctorDashboard() {
     }
   };
 
-  const handleQRScan = (patientIdOrUrl: string) => {
+  const handleQRScan = (scannedData: string) => {
     setShowScanner(false);
+    let patientId = scannedData.trim();
     
-    let patientId = patientIdOrUrl.trim();
-    
-    // QR code contains JSON: {"campId":"...", "patientId":"ABC123-0001"}
-    // Try parsing as JSON first
     try {
-      const qrData = JSON.parse(patientIdOrUrl.trim());
-      patientId = qrData.patientId || qrData.patientIdPerCamp || patientIdOrUrl.trim();
-    } catch (parseError) {
-      // If JSON parse fails, treat it as plain patient ID
-      patientId = patientIdOrUrl.trim();
+      const qrData = JSON.parse(scannedData);
+      patientId = qrData.patientId || qrData.patientIdPerCamp || scannedData.trim();
+    } catch {
+      patientId = scannedData.trim();
     }
     
-    // Show scanned data in search input
     setSearchQuery(patientId);
-    
-    addToast({
-      type: 'success',
-      title: 'QR Scanned Successfully',
-      message: `Patient ID: ${patientId} - Now click Search button`
-    });
   };
 
   const handleConsultClick = (visit: Visit) => {
@@ -359,89 +348,45 @@ export default function DoctorDashboard() {
 
 function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; onClose: () => void }) {
   const [manualInput, setManualInput] = useState('');
-  const [hasCamera, setHasCamera] = useState(true);
-  const [scanning, setScanning] = useState(false);
-  const [wantsToScan, setWantsToScan] = useState(false);
-  const [error, setError] = useState('');
   const scannerRef = useRef<any>(null);
-  const isMountedRef = useRef(true);
-  const scannerElementId = 'qr-scanner';
 
   useEffect(() => {
-    isMountedRef.current = true;
-    
-    return () => {
-      // Cleanup
-      isMountedRef.current = false;
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch((err: any) => {
-          console.error('Error stopping scanner:', err);
-        });
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!wantsToScan) return;
-    
     let html5QrCode: any = null;
+    let mounted = true;
 
     const startScanner = async () => {
       try {
-        // Dynamically import html5-qrcode
         const { Html5Qrcode } = await import('html5-qrcode');
+        if (!mounted) return;
         
-        if (!isMountedRef.current) return;
-        
-        html5QrCode = new Html5Qrcode(scannerElementId);
+        html5QrCode = new Html5Qrcode('qr-reader');
         scannerRef.current = html5QrCode;
 
-        // Start scanning
         await html5QrCode.start(
-          { facingMode: 'environment' }, // Use back camera on mobile
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 }
-          },
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: 250 },
           (decodedText: string) => {
-            // QR code detected!
-            console.log('QR Code detected:', decodedText);
-            
-            // Stop the scanner first
-            if (scannerRef.current && isMountedRef.current) {
-              scannerRef.current.stop().then(() => {
-                // Call onScan after scanner is stopped
-                if (isMountedRef.current) {
-                  onScan(decodedText);
-                }
-              }).catch(console.error);
+            if (mounted && scannerRef.current) {
+              scannerRef.current.stop().catch(console.error);
+              onScan(decodedText);
             }
           },
-          (errorMessage: string) => {
-            // Scanning in progress, no QR code detected yet
-          }
+          () => {}
         );
-        
-        if (isMountedRef.current) {
-          setScanning(true);
-        }
-      } catch (err: any) {
-        console.error('QR Scanner error:', err);
-        if (isMountedRef.current) {
-          setHasCamera(false);
-          setError(err.message || 'Camera not available');
-        }
+      } catch (err) {
+        console.error('Scanner error:', err);
       }
     };
-    
-    startScanner();
-  }, [wantsToScan]);
 
-  const handleManualSubmit = () => {
-    if (manualInput.trim()) {
-      onScan(manualInput.trim());
-    }
-  };
+    startScanner();
+
+    return () => {
+      mounted = false;
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(console.error);
+      }
+    };
+  }, [onScan]);
 
   return (
     <div style={{
@@ -458,72 +403,33 @@ function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; o
         background: 'white',
         borderRadius: '0.5rem',
         padding: '1.5rem',
-        maxWidth: '400px',
+        maxWidth: '500px',
         width: '100%'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 style={{ margin: 0 }}>Scan Patient QR Code</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h2 style={{ margin: 0 }}>Scan QR Code</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
         </div>
 
-        {!wantsToScan ? (
-          <div style={{ marginBottom: '1rem' }}>
-            <button
-              onClick={() => setWantsToScan(true)}
-              style={{
-                width: '100%',
-                padding: '1rem',
-                background: '#10b981',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.5rem',
-                fontSize: '1rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                marginBottom: '1rem'
-              }}
-            >
-              📷 Start Camera Scanner
-            </button>
-            <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
-              Or enter Patient ID manually below
-            </div>
-          </div>
-        ) : hasCamera ? (
-          <div style={{ marginBottom: '1rem' }}>
-            <div
-              id={scannerElementId}
-              style={{ width: '100%', borderRadius: '0.5rem', overflow: 'hidden' }}
-            />
-            {scanning && (
-              <p style={{ textAlign: 'center', color: 'var(--color-success)', marginTop: '0.5rem', fontWeight: 600 }}>
-                📷 Point camera at QR code
-              </p>
-            )}
-          </div>
-        ) : (
-          <div style={{ marginBottom: '1rem', padding: '1rem', background: '#fef2f2', borderRadius: '0.5rem' }}>
-            <p style={{ color: 'var(--color-error)', margin: 0 }}>
-              ⚠️ Camera not available. {error}
-            </p>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-              Please check camera permissions or enter Patient ID manually below.
-            </p>
-          </div>
-        )}
+        <div id="qr-reader" style={{ width: '100%', marginBottom: '1rem' }}></div>
 
-        <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1rem' }}>
-          <p style={{ marginBottom: '0.5rem', fontWeight: '500' }}>Enter Patient ID manually:</p>
+        <div style={{ borderTop: '1px solid #ddd', paddingTop: '1rem' }}>
+          <p style={{ marginBottom: '0.5rem', fontWeight: '500' }}>Or enter manually:</p>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <input
               type="text"
-              placeholder="Patient ID (e.g., ABC123-0001)"
+              placeholder="Patient ID"
               value={manualInput}
               onChange={(e) => setManualInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleManualSubmit()}
-              style={{ flex: 1 }}
+              onKeyPress={(e) => e.key === 'Enter' && manualInput.trim() && onScan(manualInput.trim())}
+              style={{ flex: 1, padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #ddd' }}
             />
-            <button onClick={handleManualSubmit} className="btn btn-primary">Go</button>
+            <button 
+              onClick={() => manualInput.trim() && onScan(manualInput.trim())}
+              style={{ padding: '0.5rem 1rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '0.25rem', cursor: 'pointer' }}
+            >
+              Go
+            </button>
           </div>
         </div>
       </div>

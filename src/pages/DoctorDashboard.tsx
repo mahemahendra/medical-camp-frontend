@@ -91,7 +91,6 @@ export default function DoctorDashboard() {
 
   const handleQRScan = async (patientIdOrUrl: string) => {
     setShowScanner(false);
-    setLoading(true);
     
     try {
       let patientId: string;
@@ -109,49 +108,27 @@ export default function DoctorDashboard() {
         console.log('Using plain patient ID:', patientId);
       }
       
-      // Search by patient ID
-      const response = await api.get(`/doctor/${user?.campId}/visitors/search`, {
-        params: { query: patientId, searchBy: 'patientId' }
-      });
-      const visitors = response.data.visitors || [];
+      // Show scanned data in search input
+      setSearchQuery(patientId);
       
-      if (visitors.length > 0) {
-        const visitor = visitors[0];
-        
-        // Use the visitor-by-qr endpoint for better performance
-        const visitorResponse = await api.get(`/doctor/${user?.campId}/visitor-by-qr/${visitor.id}`);
-        
-        if (visitorResponse.data.visit) {
-          const visit = visitorResponse.data.visit;
-          
-          // Pass only visit.id to modal - it will fetch all data itself
-          setSelectedVisit({ id: visit.id } as Visit);
-          setShowConsultation(true);
-          addToast({
-            type: 'success',
-            title: 'Patient Found',
-            message: `Opening consultation for ${visitor.name}`
-          });
-          return;
-        }
-      }
-      
-      // If we reach here, patient was not found
       addToast({
-        type: 'error',
-        title: 'Patient Not Found',
-        message: `Could not find patient with ID: ${patientId}`
+        type: 'success',
+        title: 'QR Code Scanned',
+        message: `Scanned: ${patientId}. Click Search to find patient.`
       });
+      
+      // Optionally auto-trigger search after a short delay
+      setTimeout(() => {
+        handleSearch();
+      }, 500);
+      
     } catch (error: any) {
       console.error('QR Scan error details:', error);
-      console.error('Error response:', error.response?.data);
       addToast({
         type: 'error',
-        title: 'Error',
-        message: error.response?.data?.error || error.response?.data?.message || 'Failed to search for patient'
+        title: 'Scan Error',
+        message: 'Failed to process QR code. Please try manual entry.'
       });
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -250,7 +250,7 @@ export default function DoctorDashboard() {
               🔍 Search
             </Button>
             <Button onClick={() => setShowScanner(true)} style={{ background: '#10b981', color: 'white' }}>
-              📷 Manvithaaa
+              📷 Scan QR
             </Button>
           </div>
         </Card>
@@ -317,18 +317,8 @@ export default function DoctorDashboard() {
         <QRScannerModal
           onScan={(data) => {
             setShowScanner(false);
-            let patientId = data.trim();
-            try {
-              // Try to parse scanned data as JSON
-              const parsedData = JSON.parse(data);
-              // Backend generates QR with "patientId" key, not "patientIdPerCamp"
-              if (parsedData && parsedData.patientId) {
-                patientId = parsedData.patientId;
-              }
-            } catch (e) {
-              // Not a JSON object, use the raw data
-              console.log("QR code is not a JSON object, using raw data.");
-            }
+            // QR code now contains only the patient ID
+            const patientId = data.trim();
             setSearchQuery(patientId);
           }}
           onClose={() => setShowScanner(false)}

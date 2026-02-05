@@ -60,8 +60,9 @@ export default function DoctorDashboard() {
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
+  const handleSearch = async (customQuery?: string) => {
+    const queryToUse = customQuery || searchQuery;
+    if (!queryToUse.trim()) {
       loadVisitors();
       return;
     }
@@ -69,7 +70,7 @@ export default function DoctorDashboard() {
     setLoading(true);
     try {
       const response = await api.get(`/doctor/${user?.campId}/visitors/search`, {
-        params: { query: searchQuery }
+        params: { query: queryToUse }
       });
       const visitors = response.data.visitors || [];
       if (visitors.length > 0) {
@@ -320,6 +321,8 @@ export default function DoctorDashboard() {
             // QR code now contains only the patient ID
             const patientId = data.trim();
             setSearchQuery(patientId);
+            // Automatically trigger search with the scanned patientId
+            handleSearch(patientId);
           }}
           onClose={() => setShowScanner(false)}
         />

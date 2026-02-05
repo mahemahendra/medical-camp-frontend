@@ -94,21 +94,35 @@ export default function DoctorDashboard() {
     setLoading(true);
     
     try {
-      // QR code contains only Patient ID (e.g., "ABC123-0001")
-      const patientId = patientIdOrUrl.trim();
+      let patientId: string;
+      
+      // QR code contains JSON: {"campId":"...", "patientId":"ABC123-0001"}
+      // Try parsing as JSON first
+      try {
+        const qrData = JSON.parse(patientIdOrUrl.trim());
+        patientId = qrData.patientId || qrData.patientIdPerCamp || patientIdOrUrl.trim();
+        console.log('Parsed QR data:', qrData);
+        console.log('Extracted patient ID:', patientId);
+      } catch (parseError) {
+        // If JSON parse fails, treat it as plain patient ID
+        patientId = patientIdOrUrl.trim();
+        console.log('Using plain patient ID:', patientId);
+      }
       
       // Search by patient ID
       const response = await api.get(`/doctor/${user?.campId}/visitors/search`, {
-        params: { query: patientId }
+        params: { query: patientId, searchBy: 'patientId' }
       });
       const visitors = response.data.visitors || [];
       
       if (visitors.length > 0) {
         const visitor = visitors[0];
-        const visitorResponse = await api.get(`/doctor/${user?.campId}/visitors/${visitor.id}`);
         
-        if (visitorResponse.data.visits?.length > 0) {
-          const visit = visitorResponse.data.visits[0];
+        // Use the visitor-by-qr endpoint for better performance
+        const visitorResponse = await api.get(`/doctor/${user?.campId}/visitor-by-qr/${visitor.id}`);
+        
+        if (visitorResponse.data.visit) {
+          const visit = visitorResponse.data.visit;
           
           // Pass only visit.id to modal - it will fetch all data itself
           setSelectedVisit({ id: visit.id } as Visit);

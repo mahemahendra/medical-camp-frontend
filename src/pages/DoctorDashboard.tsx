@@ -32,7 +32,6 @@ export default function DoctorDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
   const [showConsultation, setShowConsultation] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'REGISTERED' | 'COMPLETED'>('ALL');
   const [campLogo, setCampLogo] = useState<string>('');
 
@@ -87,20 +86,6 @@ export default function DoctorDashboard() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQRScan = (scannedData: string) => {
-    setShowScanner(false);
-    let patientId = scannedData.trim();
-    
-    try {
-      const qrData = JSON.parse(scannedData);
-      patientId = qrData.patientId || qrData.patientIdPerCamp || scannedData.trim();
-    } catch {
-      patientId = scannedData.trim();
-    }
-    
-    setSearchQuery(patientId);
   };
 
   const handleConsultClick = (visit: Visit) => {
@@ -263,9 +248,6 @@ export default function DoctorDashboard() {
             <Button onClick={handleSearch} variant="primary">
               🔍 Search
             </Button>
-            <Button onClick={() => setShowScanner(true)} style={{ background: '#10b981', color: 'white' }}>
-              📷 Scan QR
-            </Button>
           </div>
         </Card>
 
@@ -326,14 +308,6 @@ export default function DoctorDashboard() {
         </Card>
       </ContentContainer>
 
-      {/* QR Scanner Modal */}
-      {showScanner && (
-        <QRScannerModal
-          onScan={handleQRScan}
-          onClose={() => setShowScanner(false)}
-        />
-      )}
-
       {/* Consultation Modal */}
       {showConsultation && selectedVisit && (
         <ConsultationModal
@@ -343,97 +317,6 @@ export default function DoctorDashboard() {
         />
       )}
     </PageContainer>
-  );
-}
-
-function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; onClose: () => void }) {
-  const [manualInput, setManualInput] = useState('');
-  const scannerRef = useRef<any>(null);
-
-  useEffect(() => {
-    let html5QrCode: any = null;
-    let mounted = true;
-
-    const startScanner = async () => {
-      try {
-        const { Html5Qrcode } = await import('html5-qrcode');
-        if (!mounted) return;
-        
-        html5QrCode = new Html5Qrcode('qr-reader');
-        scannerRef.current = html5QrCode;
-
-        await html5QrCode.start(
-          { facingMode: 'environment' },
-          { fps: 10, qrbox: 250 },
-          (decodedText: string) => {
-            if (mounted && scannerRef.current) {
-              scannerRef.current.stop().catch(console.error);
-              onScan(decodedText);
-            }
-          },
-          () => {}
-        );
-      } catch (err) {
-        console.error('Scanner error:', err);
-      }
-    };
-
-    startScanner();
-
-    return () => {
-      mounted = false;
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(console.error);
-      }
-    };
-  }, [onScan]);
-
-  return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(0,0,0,0.8)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '1rem'
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '0.5rem',
-        padding: '1.5rem',
-        maxWidth: '500px',
-        width: '100%'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h2 style={{ margin: 0 }}>Scan QR Code</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
-        </div>
-
-        <div id="qr-reader" style={{ width: '100%', marginBottom: '1rem' }}></div>
-
-        <div style={{ borderTop: '1px solid #ddd', paddingTop: '1rem' }}>
-          <p style={{ marginBottom: '0.5rem', fontWeight: '500' }}>Or enter manually:</p>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <input
-              type="text"
-              placeholder="Patient ID"
-              value={manualInput}
-              onChange={(e) => setManualInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && manualInput.trim() && onScan(manualInput.trim())}
-              style={{ flex: 1, padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #ddd' }}
-            />
-            <button 
-              onClick={() => manualInput.trim() && onScan(manualInput.trim())}
-              style={{ padding: '0.5rem 1rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '0.25rem', cursor: 'pointer' }}
-            >
-              Go
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
 

@@ -32,6 +32,7 @@ export default function DoctorDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
   const [showConsultation, setShowConsultation] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'REGISTERED' | 'COMPLETED'>('ALL');
   const [campLogo, setCampLogo] = useState<string>('');
 
@@ -248,6 +249,9 @@ export default function DoctorDashboard() {
             <Button onClick={handleSearch} variant="primary">
               🔍 Search
             </Button>
+            <Button onClick={() => setShowScanner(true)} style={{ background: '#10b981', color: 'white' }}>
+              📷 Scan QR
+            </Button>
           </div>
         </Card>
 
@@ -307,6 +311,25 @@ export default function DoctorDashboard() {
           </div>
         </Card>
       </ContentContainer>
+
+      {/* QR Scanner Modal */}
+      {showScanner && (
+        <QRScannerModal
+          onScan={(data) => {
+            setShowScanner(false);
+            // Extract patient ID from scanned data
+            let patientId = data.trim();
+            try {
+              const parsed = JSON.parse(data);
+              patientId = parsed.patientId || parsed.patientIdPerCamp || data.trim();
+            } catch {
+              // Not JSON, use as-is
+            }
+            setSearchQuery(patientId);
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
 
       {/* Consultation Modal */}
       {showConsultation && selectedVisit && (
@@ -905,6 +928,280 @@ function ConsultationModal({ visit, onSave, onClose }: {
         </form>
         </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Simple QR Scanner Modal Component
+function QRScannerModal({ onScan, onClose }: { onScan: (data: string) => void; onClose: () => void }) {
+  const [manualInput, setManualInput] = useState('');
+  const [scannerActive, setScannerActive] = useState(false);
+  const [error, setError] = useState('');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animationRef = useRef<number>(0);
+
+  // Start camera and scan for QR codes
+  const startScanner = async () => {
+    setError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      streamRef.current = stream;
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+        setScannerActive(true);
+        scanQRCode();
+      }
+    } catch (err: any) {
+      setError('Camera access denied. Please allow camera permission or enter Patient ID manually.');
+      console.error('Camera error:', err);
+    }
+  };
+
+  // Scan QR code from video stream
+  const scanQRCode = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Wait for video to be ready
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      animationRef.current = requestAnimationFrame(scanQRCode);
+      return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    try {
+      // Use BarcodeDetector API if available
+      if ('BarcodeDetector' in window) {
+        const barcodeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+        const barcodes = await barcodeDetector.detect(canvas);
+        if (barcodes.length > 0) {
+          stopScanner();
+          onScan(barcodes[0].rawValue);
+          return;
+        }
+      }
+    } catch (err) {
+      // BarcodeDetector not supported or failed, continue scanning
+    }
+
+    // Continue scanning
+    animationRef.current = requestAnimationFrame(scanQRCode);
+  };
+
+  // Stop camera stream
+  const stopScanner = () => {
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setScannerActive(false);
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopScanner();
+    };
+  }, []);
+
+  const handleManualSubmit = () => {
+    if (manualInput.trim()) {
+      stopScanner();
+      onScan(manualInput.trim());
+    }
+  };
+
+  const handleClose = () => {
+    stopScanner();
+    onClose();
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,0.85)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '1rem'
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '0.75rem',
+        padding: '1.5rem',
+        maxWidth: '420px',
+        width: '100%',
+        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 style={{ margin: 0, fontSize: '1.25rem' }}>📷 Scan Patient QR</h2>
+          <button 
+            onClick={handleClose} 
+            style={{ 
+              background: '#f3f4f6', 
+              border: 'none', 
+              fontSize: '1.25rem', 
+              cursor: 'pointer',
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Scanner Area */}
+        {!scannerActive ? (
+          <div style={{ marginBottom: '1rem' }}>
+            <button
+              onClick={startScanner}
+              style={{
+                width: '100%',
+                padding: '1rem',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              📷 Start Camera Scanner
+            </button>
+            {error && (
+              <p style={{ 
+                color: '#dc2626', 
+                fontSize: '0.875rem', 
+                marginTop: '0.75rem',
+                padding: '0.75rem',
+                background: '#fef2f2',
+                borderRadius: '0.375rem',
+                margin: '0.75rem 0 0 0'
+              }}>
+                ⚠️ {error}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div style={{ marginBottom: '1rem', position: 'relative' }}>
+            <video
+              ref={videoRef}
+              style={{
+                width: '100%',
+                borderRadius: '0.5rem',
+                background: '#000'
+              }}
+              playsInline
+              muted
+            />
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            {/* Scanning overlay */}
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '200px',
+              height: '200px',
+              border: '3px solid #10b981',
+              borderRadius: '1rem',
+              boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)'
+            }} />
+            <p style={{ 
+              textAlign: 'center', 
+              color: '#10b981', 
+              marginTop: '0.75rem',
+              fontWeight: '600'
+            }}>
+              📷 Point camera at QR code...
+            </p>
+            <button
+              onClick={stopScanner}
+              style={{
+                width: '100%',
+                marginTop: '0.5rem',
+                padding: '0.5rem',
+                background: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.375rem',
+                cursor: 'pointer'
+              }}
+            >
+              Stop Camera
+            </button>
+          </div>
+        )}
+
+        {/* Manual Entry */}
+        <div style={{ 
+          borderTop: '1px solid #e5e7eb', 
+          paddingTop: '1rem',
+          marginTop: '0.5rem'
+        }}>
+          <p style={{ marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+            Or enter Patient ID manually:
+          </p>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              type="text"
+              placeholder="e.g., ABC123-0001"
+              value={manualInput}
+              onChange={(e) => setManualInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleManualSubmit()}
+              style={{ 
+                flex: 1, 
+                padding: '0.75rem',
+                borderRadius: '0.375rem',
+                border: '1px solid #d1d5db',
+                fontSize: '1rem'
+              }}
+            />
+            <button 
+              onClick={handleManualSubmit}
+              style={{ 
+                padding: '0.75rem 1.25rem',
+                background: '#2563eb',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.375rem',
+                cursor: 'pointer',
+                fontWeight: '600'
+              }}
+            >
+              Go
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

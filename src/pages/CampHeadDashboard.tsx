@@ -193,6 +193,59 @@ export default function CampHeadDashboard() {
             )}
           </SectionCard>
 
+          <SectionCard title="Sales Team">
+            {analytics?.salesFollowUpDistribution && analytics.salesFollowUpDistribution.length > 0 ? (
+              <>
+                {/* Summary Stats */}
+                {analytics.salesSummary && (
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '80px', background: '#dbeafe', borderRadius: '8px', padding: '0.75rem', textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e40af' }}>{analytics.salesSummary.totalFollowedUp}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#3b82f6' }}>Followed Up</div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: '80px', background: '#fef3c7', borderRadius: '8px', padding: '0.75rem', textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#92400e' }}>{analytics.salesSummary.totalPending}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#d97706' }}>Pending</div>
+                    </div>
+                  </div>
+                )}
+                {/* Pie Chart */}
+                <div style={{ width: '100%', height: '300px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={analytics.salesFollowUpDistribution.map((item) => ({
+                          name: item.status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                          value: parseInt(item.count.toString())
+                        }))}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ percent }) => percent ? `${(percent * 100).toFixed(0)}%` : '0%'}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {analytics.salesFollowUpDistribution.map((_entry, index) => {
+                          const COLORS = ['#059669', '#dc2626', '#d97706', '#64748b', '#2563eb', '#9333ea'];
+                          return <Cell key={`sales-cell-${index}`} fill={COLORS[index % COLORS.length]} />;
+                        })}
+                      </Pie>
+                      <Tooltip />
+                      <Legend 
+                        verticalAlign="bottom" 
+                        height={60}
+                        wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </>
+            ) : (
+              <p style={{ color: 'var(--color-text-secondary)' }}>No sales follow-up data available</p>
+            )}
+          </SectionCard>
+
           <SectionCard title="Doctor Statistics">
             {analytics?.doctorStats && analytics.doctorStats.length > 0 ? (
               analytics.doctorStats.map((item, index) => (

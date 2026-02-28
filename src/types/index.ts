@@ -129,6 +129,8 @@ export interface Analytics {
   ageDistribution: Array<{ ageGroup: string; count: number }>;
   doctorStats: Array<{ doctorName: string; visitCount: number }>;
   followUpDistribution: Array<{ followUpAdvice: string; count: number }>;
+  salesFollowUpDistribution: Array<{ status: string; count: number }>;
+  salesSummary: { totalCompleted: number; totalFollowedUp: number; totalPending: number };
 }
 
 export enum FollowUpStatus {

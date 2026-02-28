@@ -49,10 +49,18 @@ export default function AdminCampCreate() {
     }));
     formDataToSend.append('doctors', JSON.stringify(doctorsData));
 
+    const salesUsersData = (data.salesUsers || []).map(s => ({
+      name: s.name,
+      email: s.email,
+      phone: s.phone
+    }));
+    formDataToSend.append('salesUsers', JSON.stringify(salesUsersData));
+
     const pwSettings: any = { mode: data.passwordSettings?.mode || 'auto' };
     if (data.passwordSettings?.mode === 'manual') {
       pwSettings.campHeadPassword = data.passwordSettings.campHeadPassword;
       pwSettings.doctorPasswords = data.passwordSettings.doctorPasswords;
+      pwSettings.salesPasswords = data.passwordSettings.salesPasswords;
     }
     formDataToSend.append('passwordSettings', JSON.stringify(pwSettings));
 
@@ -111,6 +119,18 @@ export default function AdminCampCreate() {
                 ))}
               </div>
             </div>
+            {result.salesCredentials && result.salesCredentials.length > 0 && (
+              <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', marginTop: '0.75rem' }}>
+                <strong>Sales User Credentials:</strong>
+                <div style={{ maxHeight: '200px', overflowY: 'auto', marginTop: '0.5rem' }}>
+                  {result.salesCredentials.map((sale: any, idx: number) => (
+                    <p key={idx} style={{ margin: '0.25rem 0', fontSize: '0.9rem' }}>
+                      {sale.name}: {sale.email} / <code style={{ background: '#f1f5f9', padding: '0.125rem 0.25rem', borderRadius: '4px' }}>{sale.tempPassword}</code>
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </ContentContainer>
       </PageContainer>

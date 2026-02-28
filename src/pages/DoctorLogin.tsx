@@ -47,6 +47,8 @@ export default function DoctorLogin() {
         navigate(`/${campSlug}/doctor`);
       } else if (user.role === 'CAMP_HEAD') {
         navigate(`/${campSlug}/camp-head`);
+      } else if (user.role === 'SALES') {
+        navigate(`/${campSlug}/sales`);
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed');

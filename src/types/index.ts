@@ -5,7 +5,8 @@
 export enum UserRole {
   ADMIN = 'ADMIN',
   CAMP_HEAD = 'CAMP_HEAD',
-  DOCTOR = 'DOCTOR'
+  DOCTOR = 'DOCTOR',
+  SALES = 'SALES'
 }
 
 export interface User {
@@ -128,4 +129,56 @@ export interface Analytics {
   ageDistribution: Array<{ ageGroup: string; count: number }>;
   doctorStats: Array<{ doctorName: string; visitCount: number }>;
   followUpDistribution: Array<{ followUpAdvice: string; count: number }>;
+}
+
+export enum FollowUpStatus {
+  INTERESTED = 'INTERESTED',
+  NOT_INTERESTED = 'NOT_INTERESTED',
+  FOLLOW_UP_REQUIRED = 'FOLLOW_UP_REQUIRED',
+  FOLLOW_UP_NOT_REQUIRED = 'FOLLOW_UP_NOT_REQUIRED',
+  COMPLETED = 'COMPLETED',
+  NO_RESPONSE = 'NO_RESPONSE'
+}
+
+export interface FollowUp {
+  id: string;
+  status: FollowUpStatus;
+  comment: string | null;
+  calledAt: string | null;
+  salesUserName?: string;
+  updatedAt: string;
+}
+
+export interface VisitorWithFollowUp {
+  visitor: {
+    id: string;
+    name: string;
+    phone: string;
+    age: number;
+    gender: string;
+    patientIdPerCamp: string;
+    address?: string;
+    city?: string;
+    symptoms?: string;
+    existingConditions?: string;
+  };
+  visit: {
+    id: string;
+    status: string;
+    consultationTime?: string;
+    doctorName: string;
+  };
+  consultation: {
+    diagnosis: string;
+    treatmentPlan: string;
+    followUpAdvice?: string;
+  } | null;
+  followUp: FollowUp | null;
+}
+
+export interface FollowUpStats {
+  totalCompleted: number;
+  totalFollowedUp: number;
+  totalPending: number;
+  statusBreakdown: Array<{ status: string; count: number }>;
 }

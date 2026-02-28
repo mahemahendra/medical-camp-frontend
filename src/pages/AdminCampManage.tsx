@@ -36,10 +36,18 @@ interface CampHead {
   campId: string;
 }
 
+interface SalesUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  campId: string;
+}
+
 // Password Reset Modal Component (moved outside to prevent re-creation on renders)
 interface PasswordResetModalProps {
   show: boolean;
-  selectedUser: { id: string; name: string; type: 'doctor' | 'campHead' } | null;
+  selectedUser: { id: string; name: string; type: 'doctor' | 'campHead' | 'salesUser' } | null;
   passwordSettings: { mode: 'auto' | 'manual'; manualPassword: string };
   credentialLoading: string | null;
   onClose: () => void;
@@ -58,7 +66,7 @@ function PasswordResetModal({
 }: PasswordResetModalProps) {
   if (!show || !selectedUser) return null;
 
-  const userTitle = selectedUser.type === 'doctor' ? 'Dr.' : 'Camp Head';
+  const userTitle = selectedUser.type === 'doctor' ? 'Dr.' : selectedUser.type === 'salesUser' ? 'Sales' : 'Camp Head';
 
   const generateRandomPassword = () => {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
@@ -266,13 +274,14 @@ export default function AdminCampManage() {
   const [camp, setCamp] = useState<CampDetails | null>(null);
   const [campHead, setCampHead] = useState<CampHead | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [salesUsers, setSalesUsers] = useState<SalesUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [credentialLoading, setCredentialLoading] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
 
   // Password Reset Modal State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; type: 'doctor' | 'campHead' } | null>(null);
+  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; type: 'doctor' | 'campHead' | 'salesUser' } | null>(null);
   const [passwordSettings, setPasswordSettings] = useState({
     mode: 'auto' as 'auto' | 'manual',
     manualPassword: ''
@@ -293,9 +302,10 @@ export default function AdminCampManage() {
       setCamp(campResponse.data.camp);
 
       // Fetch camp head and doctors (these can fail independently)
-      const [campHeadResult, doctorsResult] = await Promise.allSettled([
+      const [campHeadResult, doctorsResult, salesUsersResult] = await Promise.allSettled([
         apiClient.get(`/admin/camps/${campId}/camp-head`),
-        apiClient.get(`/admin/camps/${campId}/doctors`)
+        apiClient.get(`/admin/camps/${campId}/doctors`),
+        apiClient.get(`/admin/camps/${campId}/sales-users`)
       ]);
 
       // Handle camp head result
@@ -311,6 +321,13 @@ export default function AdminCampManage() {
       } else {
         setDoctors([]);
       }
+
+      // Handle sales users result
+      if (salesUsersResult.status === 'fulfilled') {
+        setSalesUsers(salesUsersResult.value.data.salesUsers || []);
+      } else {
+        setSalesUsers([]);
+      }
     } catch (error) {
       addToast({
         type: 'error',
@@ -323,7 +340,7 @@ export default function AdminCampManage() {
     }
   };
 
-  const handleResetPassword = async (userId: string, userName: string, userType: 'doctor' | 'campHead') => {
+  const handleResetPassword = async (userId: string, userName: string, userType: 'doctor' | 'campHead' | 'salesUser') => {
     setSelectedUser({ id: userId, name: userName, type: userType });
     setPasswordSettings({ mode: 'auto', manualPassword: '' });
     setShowPasswordModal(true);
@@ -356,11 +373,13 @@ export default function AdminCampManage() {
 
       const endpoint = selectedUser.type === 'doctor' 
         ? `/admin/doctors/${selectedUser.id}/reset-password`
+        : selectedUser.type === 'salesUser'
+        ? `/admin/sales-users/${selectedUser.id}/reset-password`
         : `/admin/camp-heads/${selectedUser.id}/reset-password`;
 
       const response = await apiClient.post(endpoint, payload);
 
-      const userTitle = selectedUser.type === 'doctor' ? 'Dr.' : 'Camp Head';
+      const userTitle = selectedUser.type === 'doctor' ? 'Dr.' : selectedUser.type === 'salesUser' ? 'Sales' : 'Camp Head';
       const modeText = passwordSettings.mode === 'manual' ? 'set manually' : 'auto-generated';
       setSuccessMessage(`Password ${modeText} for ${userTitle} ${selectedUser.name}. New password: ${response.data.tempPassword}`);
       setTimeout(() => setSuccessMessage(''), 10000);
@@ -680,6 +699,13 @@ export default function AdminCampManage() {
           onResetPassword={(doctorId, doctorName) => handleResetPassword(doctorId, doctorName, 'doctor')}
           credentialLoading={credentialLoading}
         />
+
+        {/* Sales Users Management */}
+        <SalesUsersDataGrid
+          salesUsers={salesUsers}
+          onResetPassword={(userId, userName) => handleResetPassword(userId, userName, 'salesUser')}
+          credentialLoading={credentialLoading}
+        />
       </ContentContainer>
 
       <PasswordResetModal
@@ -964,6 +990,220 @@ function DoctorsDataGrid({
         }}>
           <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔍</div>
           <p style={{ margin: 0 }}>No doctors found matching "{searchTerm}"</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SalesUsersDataGrid({
+  salesUsers,
+  onResetPassword,
+  credentialLoading
+}: {
+  salesUsers: SalesUser[];
+  onResetPassword: (userId: string, userName: string) => void;
+  credentialLoading: string | null;
+}) {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredSalesUsers = salesUsers
+    .filter(user =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return (
+    <div style={{
+      background: 'white',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+      marginTop: '2rem'
+    }}>
+      <div style={{
+        padding: '1.5rem 1.5rem 0 1.5rem',
+        borderBottom: '1px solid #f1f5f9'
+      }}>
+        <h2 style={{ fontSize: '1.5rem', margin: '0 0 1rem 0', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          📞 Sales Users ({salesUsers.length})
+        </h2>
+
+        {salesUsers.length > 0 && (
+          <>
+            <div style={{ position: 'relative', marginBottom: '1rem' }}>
+              <input
+                type="text"
+                placeholder="Search sales users by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem 0.75rem 3rem',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '10px',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  transition: 'all 0.2s',
+                  background: '#fafafa'
+                }}
+              />
+              <span style={{
+                position: 'absolute',
+                left: '1rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                fontSize: '1.1rem',
+                color: '#94a3b8'
+              }}>
+                🔍
+              </span>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingBottom: '1rem'
+            }}>
+              <span style={{ color: '#64748b', fontSize: '0.9rem' }}>
+                {filteredSalesUsers.length} of {salesUsers.length} sales users
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {salesUsers.length === 0 ? (
+        <div style={{
+          padding: '3rem',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📞</div>
+          <h3 style={{ color: '#64748b', margin: '0 0 0.5rem 0' }}>No Sales Users Assigned</h3>
+          <p style={{ color: '#94a3b8', margin: 0 }}>No sales users have been assigned to this camp yet.</p>
+        </div>
+      ) : (
+        <div style={{ overflow: 'auto', maxHeight: '400px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 1 }}>
+              <tr>
+                <th style={{
+                  textAlign: 'left',
+                  padding: '1rem',
+                  fontWeight: '600',
+                  color: '#334155',
+                  borderBottom: '2px solid #e2e8f0',
+                  minWidth: '200px'
+                }}>
+                  User Details
+                </th>
+                <th style={{
+                  textAlign: 'left',
+                  padding: '1rem',
+                  fontWeight: '600',
+                  color: '#334155',
+                  borderBottom: '2px solid #e2e8f0',
+                  minWidth: '180px'
+                }}>
+                  Contact Info
+                </th>
+                <th style={{
+                  textAlign: 'center',
+                  padding: '1rem',
+                  fontWeight: '600',
+                  color: '#334155',
+                  borderBottom: '2px solid #e2e8f0',
+                  minWidth: '140px'
+                }}>
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSalesUsers.map((user, index) => (
+                <tr
+                  key={user.id}
+                  style={{
+                    borderBottom: '1px solid #f1f5f9',
+                    background: index % 2 === 0 ? '#ffffff' : '#fafafa',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.target as HTMLElement).closest('tr')!.style.background = '#f0f9ff';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.target as HTMLElement).closest('tr')!.style.background = index % 2 === 0 ? '#ffffff' : '#fafafa';
+                  }}
+                >
+                  <td style={{ padding: '1rem', verticalAlign: 'top' }}>
+                    <div>
+                      <div style={{ fontWeight: '600', color: '#1e293b', marginBottom: '0.25rem' }}>
+                        {user.name}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#7c3aed' }}>
+                        ID: {user.id}
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: '1rem', verticalAlign: 'top' }}>
+                    <div>
+                      <div style={{ fontWeight: '500', color: '#334155', marginBottom: '0.25rem' }}>
+                        📧 {user.email}
+                      </div>
+                      {user.phone && (
+                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                          📞 {user.phone}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td style={{ padding: '1rem', textAlign: 'center', verticalAlign: 'top' }}>
+                    <button
+                      onClick={() => onResetPassword(user.id, user.name)}
+                      disabled={credentialLoading === user.id}
+                      style={{
+                        background: credentialLoading === user.id ? '#e2e8f0' : 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
+                        color: 'white',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontSize: '0.8rem',
+                        fontWeight: '600',
+                        cursor: credentialLoading === user.id ? 'not-allowed' : 'pointer',
+                        transition: 'transform 0.2s',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (credentialLoading !== user.id) {
+                          (e.target as HTMLElement).style.transform = 'scale(1.05)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.target as HTMLElement).style.transform = 'scale(1)';
+                      }}
+                    >
+                      {credentialLoading === user.id ? '⏳ Resetting...' : '🔑 Reset Password'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {filteredSalesUsers.length === 0 && searchTerm && (
+        <div style={{
+          padding: '2rem',
+          textAlign: 'center',
+          color: '#64748b'
+        }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔍</div>
+          <p style={{ margin: 0 }}>No sales users found matching "{searchTerm}"</p>
         </div>
       )}
     </div>

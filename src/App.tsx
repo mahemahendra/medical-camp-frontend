@@ -30,6 +30,7 @@ const AdminCampsList = lazyWithRetry(() => import('./pages/AdminCampsList'));
 const AdminCampCreate = lazyWithRetry(() => import('./pages/AdminCampCreate'));
 const AdminCampEdit = lazyWithRetry(() => import('./pages/AdminCampEdit'));
 const AdminCampManage = lazyWithRetry(() => import('./pages/AdminCampManage'));
+const SalesDashboard = lazyWithRetry(() => import('./pages/SalesDashboard'));
 
 // Protected Route wrapper that handles authentication
 function ProtectedRoute({ children, requireAdmin = false }: { children: React.ReactNode; requireAdmin?: boolean }) {
@@ -116,6 +117,12 @@ function App() {
             <Route
               path="/:campSlug/doctor/my-patients"
               element={<ProtectedRoute><CampHeadVisitors /></ProtectedRoute>}
+            />
+
+            {/* Protected routes - Sales */}
+            <Route
+              path="/:campSlug/sales"
+              element={<ProtectedRoute><SalesDashboard /></ProtectedRoute>}
             />
 
             {/* Protected routes - Camp Head */}

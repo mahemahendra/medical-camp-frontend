@@ -10,7 +10,7 @@ import {
   ModalFooter,
   SectionCard
 } from './index';
-import { CampFormProps, CampFormData, Doctor } from '../types/camp';
+import { CampFormProps, CampFormData, Doctor, SalesUser } from '../types/camp';
 
 export function CampForm({ mode, initialValues, onSubmit, onCancel, loading: externalLoading }: CampFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,12 +30,14 @@ export function CampForm({ mode, initialValues, onSubmit, onCancel, loading: ext
     campHeadPhone: initialValues?.campHeadPhone || '',
     logoUrl: initialValues?.logoUrl || '',
     backgroundImageUrl: initialValues?.backgroundImageUrl || '',
-    doctors: initialValues?.doctors || []
+    doctors: initialValues?.doctors || [],
+    salesUsers: initialValues?.salesUsers || []
   });
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [backgroundFile, setBackgroundFile] = useState<File | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>(initialValues?.doctors || []);
+  const [salesUsers, setSalesUsers] = useState<SalesUser[]>(initialValues?.salesUsers || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [csvError, setCsvError] = useState('');
@@ -43,7 +45,8 @@ export function CampForm({ mode, initialValues, onSubmit, onCancel, loading: ext
   const [passwordSettings, setPasswordSettings] = useState({
     mode: 'auto' as 'auto' | 'manual',
     campHeadPassword: '',
-    doctorPasswords: {} as Record<string, string>
+    doctorPasswords: {} as Record<string, string>,
+    salesPasswords: {} as Record<string, string>
   });
 
   // Update formData when initialValues change (for edit mode)
@@ -65,9 +68,11 @@ export function CampForm({ mode, initialValues, onSubmit, onCancel, loading: ext
         campHeadPhone: initialValues.campHeadPhone || '',
         logoUrl: initialValues.logoUrl || '',
         backgroundImageUrl: initialValues.backgroundImageUrl || '',
-        doctors: initialValues.doctors || []
+        doctors: initialValues?.doctors || [],
+        salesUsers: initialValues?.salesUsers || []
       });
       setDoctors(initialValues.doctors || []);
+      setSalesUsers(initialValues.salesUsers || []);
     }
   }, [initialValues]);
 
@@ -165,6 +170,20 @@ export function CampForm({ mode, initialValues, onSubmit, onCancel, loading: ext
     setDoctors(doctors.filter((_, i) => i !== index));
   };
 
+  const addSalesUser = () => {
+    setSalesUsers([...salesUsers, { name: '', email: '', phone: '' }]);
+  };
+
+  const updateSalesUser = (index: number, field: keyof SalesUser, value: string) => {
+    const updated = [...salesUsers];
+    updated[index] = { ...updated[index], [field]: value };
+    setSalesUsers(updated);
+  };
+
+  const removeSalesUser = (index: number) => {
+    setSalesUsers(salesUsers.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -176,6 +195,12 @@ export function CampForm({ mode, initialValues, onSubmit, onCancel, loading: ext
     const invalidDoctors = doctors.filter(d => !d.name || !d.email);
     if (invalidDoctors.length > 0) {
       setError('All doctors must have name and email');
+      return;
+    }
+
+    const invalidSalesUsers = salesUsers.filter(s => !s.name || !s.email);
+    if (invalidSalesUsers.length > 0) {
+      setError('All sales users must have name and email');
       return;
     }
 
@@ -199,6 +224,7 @@ export function CampForm({ mode, initialValues, onSubmit, onCancel, loading: ext
         logo: logoFile,
         backgroundImage: backgroundFile,
         doctors: doctors,
+        salesUsers: salesUsers,
       };
 
       if (mode === 'create') {
@@ -229,15 +255,21 @@ export function CampForm({ mode, initialValues, onSubmit, onCancel, loading: ext
       if (passwordSettings.mode === 'manual') {
         const newCampHeadPassword = generateRandomPassword();
         const newDoctorPasswords: Record<string, string> = {};
+        const newSalesPasswords: Record<string, string> = {};
 
         doctors.forEach(doctor => {
           newDoctorPasswords[doctor.email] = generateRandomPassword();
         });
 
+        salesUsers.forEach(salesUser => {
+          newSalesPasswords[salesUser.email] = generateRandomPassword();
+        });
+
         setPasswordSettings({
           ...passwordSettings,
           campHeadPassword: newCampHeadPassword,
-          doctorPasswords: newDoctorPasswords
+          doctorPasswords: newDoctorPasswords,
+          salesPasswords: newSalesPasswords
         });
       }
     };
@@ -251,6 +283,9 @@ export function CampForm({ mode, initialValues, onSubmit, onCancel, loading: ext
 
       for (const doctor of doctors) {
         if (!isValidPassword(passwordSettings.doctorPasswords[doctor.email] || '')) return false;
+      }
+      for (const salesUser of salesUsers) {
+        if (!isValidPassword(passwordSettings.salesPasswords[salesUser.email] || '')) return false;
       }
       return true;
     };
@@ -358,6 +393,34 @@ export function CampForm({ mode, initialValues, onSubmit, onCancel, loading: ext
                   ))}
                 </div>
               </FormField>
+
+              {salesUsers.length > 0 && (
+                <FormField label="Sales User Passwords">
+                  <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'grid', gap: '0.75rem' }}>
+                    {salesUsers.map((salesUser, index) => (
+                      <FormField
+                        key={index}
+                        label={`${salesUser.name} (${salesUser.email})`}
+                        error={passwordSettings.salesPasswords[salesUser.email] && !isValidPassword(passwordSettings.salesPasswords[salesUser.email]) ? 'Password must be at least 8 characters' : ''}
+                      >
+                        <Input
+                          type="text"
+                          size="sm"
+                          value={passwordSettings.salesPasswords[salesUser.email] || ''}
+                          onChange={(e) => setPasswordSettings({
+                            ...passwordSettings,
+                            salesPasswords: {
+                              ...passwordSettings.salesPasswords,
+                              [salesUser.email]: e.target.value
+                            }
+                          })}
+                          placeholder="Enter password (min 8 characters)"
+                        />
+                      </FormField>
+                    ))}
+                  </div>
+                </FormField>
+              )}
             </div>
           )}
         </ModalContent>
@@ -680,6 +743,112 @@ export function CampForm({ mode, initialValues, onSubmit, onCancel, loading: ext
                           <button
                             type="button"
                             onClick={() => removeDoctor(index)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '1.2rem',
+                              color: '#dc2626',
+                              padding: '0.25rem'
+                            }}
+                          >
+                            ×
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {mode === 'create' && (
+          <div style={{
+            background: '#f8fafc',
+            padding: '1rem',
+            borderRadius: '8px',
+            marginBottom: '1.5rem'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>📞</span> Sales Users ({salesUsers.length})
+              </h3>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={addSalesUser}
+                >
+                  + Add Sales User
+                </Button>
+              </div>
+            </div>
+
+            <div style={{
+              background: '#eff6ff',
+              padding: '0.75rem',
+              borderRadius: '6px',
+              marginBottom: '1rem',
+              fontSize: '0.8rem',
+              color: '#1e40af'
+            }}>
+              💡 Sales users handle post-consultation follow-up calls with patients.
+            </div>
+
+            {salesUsers.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                <p>No sales users added yet. Click "Add Sales User" to add one.</p>
+              </div>
+            ) : (
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: 'white' }}>
+                      <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>#</th>
+                      <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>Name *</th>
+                      <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>Email *</th>
+                      <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>Phone</th>
+                      <th style={{ width: '40px' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {salesUsers.map((salesUser, index) => (
+                      <tr key={index} style={{ background: 'white' }}>
+                        <td style={{ padding: '0.5rem', color: '#64748b', fontSize: '0.85rem' }}>{index + 1}</td>
+                        <td style={{ padding: '0.5rem' }}>
+                          <input
+                            type="text"
+                            value={salesUser.name}
+                            onChange={(e) => updateSalesUser(index, 'name', e.target.value)}
+                            placeholder="Sales user name"
+                            style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
+                          />
+                        </td>
+                        <td style={{ padding: '0.5rem' }}>
+                          <input
+                            type="email"
+                            value={salesUser.email}
+                            onChange={(e) => updateSalesUser(index, 'email', e.target.value)}
+                            placeholder="Email"
+                            style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
+                          />
+                        </td>
+                        <td style={{ padding: '0.5rem' }}>
+                          <input
+                            type="tel"
+                            value={salesUser.phone || ''}
+                            onChange={(e) => updateSalesUser(index, 'phone', e.target.value)}
+                            placeholder="Phone"
+                            style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
+                          />
+                        </td>
+                        <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => removeSalesUser(index)}
                             style={{
                               background: 'none',
                               border: 'none',

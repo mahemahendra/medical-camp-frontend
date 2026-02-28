@@ -30,11 +30,15 @@ export interface CampFormData {
   // Doctors
   doctors: Doctor[];
 
+  // Sales Users
+  salesUsers: SalesUser[];
+
   // Password settings (only for create mode)
   passwordSettings?: {
     mode: 'auto' | 'manual';
     campHeadPassword: string;
     doctorPasswords: Record<string, string>;
+    salesPasswords: Record<string, string>;
   };
 }
 
@@ -42,6 +46,12 @@ export interface Doctor {
   name: string;
   email: string;
   specialty: string;
+  phone?: string;
+}
+
+export interface SalesUser {
+  name: string;
+  email: string;
   phone?: string;
 }
 
